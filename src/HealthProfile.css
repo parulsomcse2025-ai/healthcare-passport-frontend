@@ -1,0 +1,386 @@
+/* =========================
+   HEALTH PROFILE PAGE
+========================= */
+
+.health-profile-page {
+  min-height: 100vh;
+  padding: 38px 45px;
+  background: #f6f9fd;
+  color: #17233c;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.health-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+}
+
+.profile-label {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  margin-bottom: 7px;
+}
+
+.health-profile-header h1 {
+  font-size: 30px;
+  margin: 0 0 6px;
+}
+
+.health-profile-header p:last-child {
+  color: #718096;
+  font-size: 13px;
+  margin: 0;
+}
+
+
+/* =========================
+   HEADER BUTTONS
+========================= */
+
+.profile-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-profile-button {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-profile-button:hover {
+  background: #1d4ed8;
+}
+
+.back-profile-button {
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #475569;
+  padding: 12px 18px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.back-profile-button:hover {
+  background: #f8fafc;
+}
+
+
+/* =========================
+   PROFILE SECTIONS
+========================= */
+
+.profile-section {
+  background: white;
+  border: 1px solid #e5eaf1;
+  border-radius: 15px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 24px;
+}
+
+.section-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: #eaf2ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.section-title h2 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.section-title p {
+  color: #8a96a8;
+  font-size: 11px;
+  margin: 0;
+}
+
+
+/* =========================
+   INFORMATION GRID
+========================= */
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.profile-field {
+  background: #f8fafc;
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.profile-field span,
+.large-profile-field span {
+  display: block;
+  color: #8a96a8;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+
+.profile-field strong,
+.large-profile-field strong {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+
+/* =========================
+   LARGE FIELDS
+========================= */
+
+.large-profile-field {
+  background: #f8fafc;
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.large-profile-field:last-child {
+  margin-bottom: 0;
+}
+
+
+/* =========================
+   EMERGENCY SECTION
+========================= */
+
+.emergency-profile-section {
+  border-color: #fed7aa;
+}
+
+.emergency-icon-profile {
+  background: #fff1e6;
+}
+
+
+/* =========================
+   EDIT FORM
+========================= */
+
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.edit-section {
+  border-bottom: 1px solid #edf1f6;
+  padding-bottom: 22px;
+}
+
+.edit-section:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.edit-section h3 {
+  font-size: 15px;
+  margin: 0 0 16px;
+  color: #17233c;
+}
+
+
+/* =========================
+   FORM GRID
+========================= */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+/* =========================
+   INPUTS
+========================= */
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  padding: 11px 12px;
+  font-size: 13px;
+  color: #334155;
+  background: white;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #a0aec0;
+}
+
+
+/* =========================
+   FORM BUTTONS
+========================= */
+
+.profile-form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 20px;
+  border-top: 1px solid #edf1f6;
+}
+
+.cancel-profile-btn {
+  border: 1px solid #dbe2ea;
+  background: white;
+  color: #64748b;
+  padding: 11px 18px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel-profile-btn:hover {
+  background: #f8fafc;
+}
+
+.save-profile-btn {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 11px 20px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-profile-btn:hover {
+  background: #1d4ed8;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 800px) {
+
+  .health-profile-page {
+    padding: 30px;
+  }
+
+  .health-profile-header {
+    align-items: flex-start;
+    gap: 20px;
+    flex-direction: column;
+  }
+
+  .profile-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-header-buttons {
+    width: 100%;
+  }
+}
+
+
+@media (max-width: 500px) {
+
+  .health-profile-page {
+    padding: 22px;
+  }
+
+  .health-profile-header h1 {
+    font-size: 25px;
+  }
+
+  .profile-section {
+    padding: 18px;
+  }
+
+  .profile-header-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .edit-profile-button,
+  .back-profile-button {
+    width: 100%;
+  }
+
+  .profile-form-buttons {
+    flex-direction: column-reverse;
+  }
+
+  .cancel-profile-btn,
+  .save-profile-btn {
+    width: 100%;
+  }
+}

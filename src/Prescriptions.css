@@ -1,0 +1,787 @@
+/* =========================================
+   PRESCRIPTIONS PAGE
+========================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+.prescriptions-page {
+  min-height: 100vh;
+  background: #f5f8fc;
+  padding: 40px 8%;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #24344d;
+}
+
+
+/* =========================================
+   PAGE HEADER
+========================================= */
+
+.prescriptions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 30px;
+
+  margin-bottom: 40px;
+}
+
+
+.prescriptions-tag {
+  display: inline-block;
+
+  padding: 7px 16px;
+
+  border-radius: 20px;
+
+  background: #eaf2ff;
+
+  color: #2f67b7;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 1px;
+
+  margin-bottom: 14px;
+}
+
+
+.prescriptions-header h1 {
+  margin: 0 0 12px;
+
+  font-size: 48px;
+
+  color: #24344d;
+}
+
+
+.prescriptions-header p {
+  margin: 0;
+
+  color: #667085;
+
+  font-size: 18px;
+
+  line-height: 1.6;
+
+  max-width: 650px;
+}
+
+
+.add-prescription-btn {
+  padding: 16px 25px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  background: #2f67b7;
+
+  color: white;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  box-shadow: 0 8px 20px rgba(47, 103, 183, 0.2);
+
+  transition: 0.2s ease;
+}
+
+
+.add-prescription-btn:hover {
+  background: #24579e;
+
+  transform: translateY(-2px);
+}
+
+
+/* =========================================
+   SUMMARY CARDS
+========================================= */
+
+.prescriptions-summary {
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 24px;
+
+  margin-bottom: 40px;
+}
+
+
+.prescription-summary-card {
+  display: flex;
+
+  align-items: center;
+
+  gap: 20px;
+
+  padding: 26px;
+
+  background: white;
+
+  border: 1px solid #dce4ef;
+
+  border-radius: 18px;
+
+  min-height: 115px;
+
+  box-shadow: 0 8px 25px rgba(30, 55, 90, 0.05);
+}
+
+
+.prescription-summary-icon {
+  width: 58px;
+  height: 58px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  background: #edf3ff;
+
+  border-radius: 16px;
+
+  font-size: 25px;
+
+  flex-shrink: 0;
+}
+
+
+.prescription-summary-icon.green {
+  background: #e7f8ef;
+}
+
+
+.prescription-summary-icon.orange {
+  background: #fff3e6;
+}
+
+
+.prescription-summary-card div:last-child {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+
+.prescription-summary-card span {
+  color: #667085;
+
+  font-size: 14px;
+}
+
+
+.prescription-summary-card strong {
+  color: #24344d;
+
+  font-size: 27px;
+}
+
+
+/* =========================================
+   ALL PRESCRIPTIONS CARD
+========================================= */
+
+.all-prescriptions-card {
+  background: white;
+
+  border: 1px solid #dce4ef;
+
+  border-radius: 20px;
+
+  padding: 35px;
+
+  box-shadow: 0 10px 30px rgba(30, 55, 90, 0.05);
+}
+
+
+.prescriptions-section-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding-bottom: 20px;
+
+  border-bottom: 1px solid #e6ebf2;
+}
+
+
+.prescriptions-section-header h2 {
+  margin: 0 0 6px;
+
+  font-size: 26px;
+
+  color: #24344d;
+}
+
+
+.prescriptions-section-header p {
+  margin: 0;
+
+  color: #667085;
+
+  font-size: 14px;
+}
+
+
+.back-prescriptions-btn {
+  padding: 11px 18px;
+
+  border: 1px solid #d0d9e8;
+
+  border-radius: 10px;
+
+  background: white;
+
+  color: #2f67b7;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+
+.back-prescriptions-btn:hover {
+  background: #edf3ff;
+}
+
+
+/* =========================================
+   EMPTY STATE
+========================================= */
+
+.prescriptions-empty-state {
+  min-height: 380px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  padding: 40px;
+}
+
+
+.prescriptions-empty-icon {
+  width: 82px;
+  height: 82px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  background: #edf3ff;
+
+  border-radius: 22px;
+
+  font-size: 38px;
+
+  margin-bottom: 20px;
+}
+
+
+.prescriptions-empty-state h2 {
+  margin: 0 0 12px;
+
+  color: #24344d;
+
+  font-size: 26px;
+}
+
+
+.prescriptions-empty-state p {
+  max-width: 520px;
+
+  margin: 0 0 28px;
+
+  color: #667085;
+
+  font-size: 15px;
+
+  line-height: 1.6;
+}
+
+
+.first-prescription-btn {
+  padding: 15px 25px;
+
+  border: none;
+
+  border-radius: 11px;
+
+  background: #2f67b7;
+
+  color: white;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+
+.first-prescription-btn:hover {
+  background: #24579e;
+
+  transform: translateY(-2px);
+}
+
+
+/* =========================================
+   PRESCRIPTION LIST
+========================================= */
+
+.prescriptions-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 16px;
+
+  padding-top: 24px;
+}
+
+
+.prescription-item {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 18px;
+
+  padding: 22px;
+
+  border: 1px solid #e1e7f0;
+
+  border-radius: 15px;
+
+  background: #ffffff;
+
+  transition: 0.2s ease;
+}
+
+
+.prescription-item:hover {
+  box-shadow: 0 10px 25px rgba(30, 55, 90, 0.08);
+
+  transform: translateY(-2px);
+}
+
+
+.prescription-icon {
+  width: 52px;
+  height: 52px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  background: #edf3ff;
+
+  border-radius: 14px;
+
+  font-size: 24px;
+
+  flex-shrink: 0;
+}
+
+
+.prescription-details {
+  flex: 1;
+}
+
+
+.prescription-top {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: flex-start;
+
+  gap: 20px;
+}
+
+
+.prescription-details h3 {
+  margin: 0 0 8px;
+
+  color: #24344d;
+
+  font-size: 19px;
+}
+
+
+.prescription-details p {
+  margin: 0 0 8px;
+
+  color: #667085;
+
+  font-size: 14px;
+}
+
+
+.prescription-status {
+  display: inline-block;
+
+  padding: 6px 12px;
+
+  border-radius: 20px;
+
+  background: #e7f8ef;
+
+  color: #18864b;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+
+.doctor-name {
+  margin-top: 10px !important;
+}
+
+
+.prescription-dates {
+  margin-top: 6px !important;
+
+  font-size: 13px !important;
+}
+
+
+/* =========================================
+   ADD PRESCRIPTION MODAL OVERLAY
+========================================= */
+
+.prescription-modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  background: rgba(15, 30, 55, 0.5);
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  z-index: 1000;
+}
+
+
+/* =========================================
+   MODAL
+========================================= */
+
+.prescription-modal {
+  width: 100%;
+
+  max-width: 540px;
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  background: white;
+
+  border-radius: 20px;
+
+  padding: 30px;
+
+  box-shadow: 0 25px 70px rgba(20, 40, 80, 0.3);
+}
+
+
+/* =========================================
+   MODAL HEADER
+========================================= */
+
+.prescription-modal-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 20px;
+}
+
+
+.prescription-modal-header h2 {
+  margin: 0;
+
+  color: #24344d;
+
+  font-size: 25px;
+}
+
+
+.close-prescription-modal {
+  width: 38px;
+  height: 38px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: #f2f5f9;
+
+  color: #667085;
+
+  font-size: 20px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+
+.close-prescription-modal:hover {
+  background: #e7ecf3;
+
+  color: #24344d;
+}
+
+
+/* =========================================
+   FORM
+========================================= */
+
+.prescription-modal form {
+  display: flex;
+
+  flex-direction: column;
+}
+
+
+.prescription-modal label {
+  margin-top: 14px;
+
+  margin-bottom: 7px;
+
+  color: #344054;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+.prescription-modal input,
+.prescription-modal select {
+  width: 100%;
+
+  padding: 13px 14px;
+
+  border: 1px solid #d0d9e8;
+
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  color: #24344d;
+
+  font-family: inherit;
+
+  font-size: 14px;
+
+  outline: none;
+
+  transition: 0.2s ease;
+}
+
+
+.prescription-modal input:focus,
+.prescription-modal select:focus {
+  border-color: #2f67b7;
+
+  box-shadow: 0 0 0 3px rgba(47, 103, 183, 0.12);
+}
+
+
+/* =========================================
+   MODAL BUTTONS
+========================================= */
+
+.prescription-modal-buttons {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 12px;
+
+  margin-top: 28px;
+}
+
+
+.cancel-prescription-btn {
+  padding: 13px 22px;
+
+  border: 1px solid #d0d9e8;
+
+  border-radius: 10px;
+
+  background: white;
+
+  color: #475467;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+
+.cancel-prescription-btn:hover {
+  background: #f5f7fa;
+}
+
+
+.save-prescription-btn {
+  padding: 13px 24px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: #2f67b7;
+
+  color: white;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+
+.save-prescription-btn:hover {
+  background: #24579e;
+
+  transform: translateY(-1px);
+}
+
+
+/* =========================================
+   RESPONSIVE DESIGN
+========================================= */
+
+@media (max-width: 900px) {
+
+  .prescriptions-page {
+    padding: 30px 5%;
+  }
+
+
+  .prescriptions-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+
+  .prescriptions-summary {
+    grid-template-columns: 1fr;
+  }
+
+
+  .prescriptions-header h1 {
+    font-size: 38px;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .prescriptions-page {
+    padding: 25px 18px;
+  }
+
+
+  .prescriptions-header h1 {
+    font-size: 32px;
+  }
+
+
+  .prescriptions-header p {
+    font-size: 15px;
+  }
+
+
+  .all-prescriptions-card {
+    padding: 22px;
+  }
+
+
+  .prescriptions-section-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 15px;
+  }
+
+
+  .prescription-modal {
+    padding: 22px;
+
+    border-radius: 16px;
+  }
+
+
+  .prescription-modal-buttons {
+    flex-direction: column;
+  }
+
+
+  .cancel-prescription-btn,
+  .save-prescription-btn {
+    width: 100%;
+  }
+
+
+  .prescription-item {
+    padding: 16px;
+  }
+
+
+  .prescription-top {
+    flex-direction: column;
+
+    gap: 8px;
+  }
+
+}
