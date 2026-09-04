@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import Home from "./home";
-import Login from "./Login";
+import Login from "./login";
 import Dashboard from "./Dashboard";
 import HealthProfile from "./HealthProfile";
 import EmergencyPassport from "./EmergencyPassport";
