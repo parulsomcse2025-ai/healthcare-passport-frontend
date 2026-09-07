@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Prescriptions.css";
+import { supabase } from "./supabase";
 
-function Prescriptions({
-  onBack,
-  prescriptions,
-  setPrescriptions,
-}) {
-  // Controls the Add Prescription form
+function Prescriptions({ onBack }) {
+  const [prescriptions, setPrescriptions] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  // Form data
+  const [editingPrescription, setEditingPrescription] =
+    useState(null);
+
   const [formData, setFormData] = useState({
     medicine: "",
     dosage: "",
@@ -19,14 +21,185 @@ function Prescriptions({
     endDate: "",
   });
 
-  // Open form
+  // Load prescriptions from Supabase
+  useEffect(() => {
+    loadPrescriptions();
+  }, []);
+
+  const loadPrescriptions = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setError("User is not logged in.");
+        return;
+      }
+
+      const { data, error: prescriptionError } =
+        await supabase
+          .from("prescriptions")
+          .select("*")
+          .eq("patient_id", user.id)
+          .order("prescription_date", {
+            ascending: false,
+          });
+
+      if (prescriptionError) {
+        console.error(
+          "Load prescriptions error:",
+          prescriptionError
+        );
+
+        setError("Unable to load prescriptions.");
+        return;
+      }
+
+      const formattedPrescriptions = (data || []).map(
+        (prescription) => ({
+          id: prescription.id,
+          medicine: prescription.medicine_name,
+          dosage: prescription.dosage || "",
+          frequency: prescription.frequency || "Once Daily",
+          doctor: prescription.doctor_name || "",
+          startDate: prescription.prescription_date || "",
+          endDate: calculateEndDate(
+            prescription.prescription_date,
+            prescription.duration
+          ),
+          duration: prescription.duration || "",
+          instructions: prescription.instructions || "",
+          status: getPrescriptionStatus(
+            prescription.prescription_date,
+            prescription.duration
+          ),
+        })
+      );
+
+      setPrescriptions(formattedPrescriptions);
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      setError("Something went wrong while loading prescriptions.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate end date using duration
+  const calculateEndDate = (startDate, duration) => {
+    if (!startDate || !duration) {
+      return "";
+    }
+
+    const match = duration.match(/\d+/);
+
+    if (!match) {
+      return "";
+    }
+
+    const days = parseInt(match[0], 10);
+
+    const date = new Date(startDate + "T00:00:00");
+
+    date.setDate(date.getDate() + days - 1);
+
+    return date.toISOString().split("T")[0];
+  };
+
+  // Determine prescription status
+  const getPrescriptionStatus = (startDate, duration) => {
+    if (!startDate) {
+      return "Active";
+    }
+
+    const endDate = calculateEndDate(startDate, duration);
+
+    if (!endDate) {
+      return "Active";
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const endingDate = new Date(endDate + "T00:00:00");
+
+    if (endingDate < today) {
+      return "Completed";
+    }
+
+    return "Active";
+  };
+
+  // Format date as DD/MM/YYYY
+  const formatDate = (date) => {
+    if (!date) {
+      return "Date not provided";
+    }
+
+    return new Date(
+      date + "T00:00:00"
+    ).toLocaleDateString("en-GB");
+  };
+
+  // Calculate duration in days
+  const calculateDuration = (startDate, endDate) => {
+    if (!startDate || !endDate) {
+      return null;
+    }
+
+    const start = new Date(startDate + "T00:00:00");
+    const end = new Date(endDate + "T00:00:00");
+
+    const difference =
+      Math.round(
+        (end - start) / (1000 * 60 * 60 * 24)
+      ) + 1;
+
+    return difference;
+  };
+
+  // Open add form
   const openForm = () => {
+    setEditingPrescription(null);
+
+    setFormData({
+      medicine: "",
+      dosage: "",
+      frequency: "Once Daily",
+      doctor: "",
+      startDate: "",
+      endDate: "",
+    });
+
     setShowForm(true);
   };
 
-  // Close form and reset data
+  // Open edit form
+  const openEditForm = (prescription) => {
+    setEditingPrescription(prescription);
+
+    setFormData({
+      medicine: prescription.medicine || "",
+      dosage: prescription.dosage || "",
+      frequency:
+        prescription.frequency || "Once Daily",
+      doctor: prescription.doctor || "",
+      startDate: prescription.startDate || "",
+      endDate: prescription.endDate || "",
+    });
+
+    setShowForm(true);
+  };
+
+  // Close form
   const closeForm = () => {
     setShowForm(false);
+    setEditingPrescription(null);
 
     setFormData({
       medicine: "",
@@ -42,14 +215,14 @@ function Prescriptions({
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    setFormData({
-      ...formData,
+    setFormData((previousData) => ({
+      ...previousData,
       [name]: value,
-    });
+    }));
   };
 
-  // Save prescription
-  const handleSubmit = (e) => {
+  // Save / Update prescription
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (
@@ -57,28 +230,177 @@ function Prescriptions({
       !formData.dosage ||
       !formData.startDate
     ) {
-      alert("Please fill in Medicine Name, Dosage and Start Date.");
+      alert(
+        "Please fill in Medicine Name, Dosage and Start Date."
+      );
       return;
     }
 
-    const newPrescription = {
-      id: Date.now(),
-      ...formData,
-      status: "Active",
-    };
+    if (
+      formData.endDate &&
+      formData.endDate < formData.startDate
+    ) {
+      alert("End Date cannot be before Start Date.");
+      return;
+    }
 
-    setPrescriptions([
-      ...prescriptions,
-      newPrescription,
-    ]);
+    try {
+      setSaving(true);
+      setError("");
 
-    closeForm();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setError("User is not logged in.");
+        return;
+      }
+
+      const durationDays = calculateDuration(
+        formData.startDate,
+        formData.endDate
+      );
+
+      const duration =
+        durationDays !== null
+          ? `${durationDays} days`
+          : null;
+
+      const prescriptionData = {
+        patient_id: user.id,
+        doctor_name: formData.doctor,
+        medicine_name: formData.medicine,
+        dosage: formData.dosage,
+        frequency: formData.frequency,
+        duration: duration,
+        prescription_date: formData.startDate,
+      };
+
+      if (editingPrescription) {
+        // UPDATE
+        const { error: updateError } =
+          await supabase
+            .from("prescriptions")
+            .update(prescriptionData)
+            .eq("id", editingPrescription.id)
+            .eq("patient_id", user.id);
+
+        if (updateError) {
+          console.error(
+            "Update prescription error:",
+            updateError
+          );
+
+          setError(
+            "Unable to update prescription."
+          );
+          return;
+        }
+
+        alert(
+          "Prescription updated successfully! ✅"
+        );
+      } else {
+        // INSERT
+        const { error: insertError } =
+          await supabase
+            .from("prescriptions")
+            .insert(prescriptionData);
+
+        if (insertError) {
+          console.error(
+            "Insert prescription error:",
+            insertError
+          );
+
+          setError(
+            "Unable to save prescription."
+          );
+          return;
+        }
+
+        alert(
+          "Prescription saved successfully! ✅"
+        );
+      }
+
+      closeForm();
+      await loadPrescriptions();
+    } catch (error) {
+      console.error("Save prescription error:", error);
+
+      setError(
+        "Something went wrong while saving prescription."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete prescription
+  const deletePrescription = async (prescriptionId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this prescription?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setError("User is not logged in.");
+        return;
+      }
+
+      const { error: deleteError } =
+        await supabase
+          .from("prescriptions")
+          .delete()
+          .eq("id", prescriptionId)
+          .eq("patient_id", user.id);
+
+      if (deleteError) {
+        console.error(
+          "Delete prescription error:",
+          deleteError
+        );
+
+        setError(
+          "Unable to delete prescription."
+        );
+        return;
+      }
+
+      alert(
+        "Prescription deleted successfully! 🗑️"
+      );
+
+      await loadPrescriptions();
+    } catch (error) {
+      console.error("Delete error:", error);
+
+      setError(
+        "Something went wrong while deleting prescription."
+      );
+    }
   };
 
   // Count active prescriptions
-  const activePrescriptions = prescriptions.filter(
-    (prescription) => prescription.status === "Active"
-  ).length;
+  const activePrescriptions =
+    prescriptions.filter(
+      (prescription) =>
+        prescription.status === "Active"
+    ).length;
 
   // Count completed prescriptions
   const completedPrescriptions =
@@ -88,6 +410,7 @@ function Prescriptions({
     <div className="prescriptions-page">
 
       {/* ================= PAGE HEADER ================= */}
+
       <header className="prescriptions-header">
 
         <div>
@@ -95,13 +418,11 @@ function Prescriptions({
             PRESCRIPTIONS
           </span>
 
-          <h1>
-            Your Prescriptions
-          </h1>
+          <h1>Your Prescriptions</h1>
 
           <p>
-            Keep track of your medicines, dosage, and treatment schedule
-            in one place.
+            Keep track of your medicines, dosage, and
+            treatment schedule in one place.
           </p>
         </div>
 
@@ -116,6 +437,7 @@ function Prescriptions({
 
 
       {/* ================= SUMMARY CARDS ================= */}
+
       <section className="prescriptions-summary">
 
         <div className="prescription-summary-card">
@@ -126,7 +448,9 @@ function Prescriptions({
 
           <div>
             <span>Total Prescriptions</span>
-            <strong>{prescriptions.length}</strong>
+            <strong>
+              {prescriptions.length}
+            </strong>
           </div>
 
         </div>
@@ -140,7 +464,9 @@ function Prescriptions({
 
           <div>
             <span>Active Prescriptions</span>
-            <strong>{activePrescriptions}</strong>
+            <strong>
+              {activePrescriptions}
+            </strong>
           </div>
 
         </div>
@@ -154,6 +480,7 @@ function Prescriptions({
 
           <div>
             <span>Completed</span>
+
             <strong>
               {completedPrescriptions}
             </strong>
@@ -165,17 +492,17 @@ function Prescriptions({
 
 
       {/* ================= PRESCRIPTIONS LIST ================= */}
+
       <section className="all-prescriptions-card">
 
         <div className="prescriptions-section-header">
 
           <div>
-            <h2>
-              All Prescriptions
-            </h2>
+            <h2>All Prescriptions</h2>
 
             <p>
-              Manage your medicines and treatment schedules
+              Manage your medicines and treatment
+              schedules
             </p>
           </div>
 
@@ -189,8 +516,33 @@ function Prescriptions({
         </div>
 
 
-        {/* EMPTY STATE */}
-        {prescriptions.length === 0 ? (
+        {error && (
+          <div className="token-error">
+            ⚠️ {error}
+          </div>
+        )}
+
+
+        {loading ? (
+
+          <div className="prescriptions-empty-state">
+
+            <div className="prescriptions-empty-icon">
+              🔄
+            </div>
+
+            <h2>
+              Loading prescriptions...
+            </h2>
+
+            <p>
+              Please wait while your prescriptions
+              are loaded.
+            </p>
+
+          </div>
+
+        ) : prescriptions.length === 0 ? (
 
           <div className="prescriptions-empty-state">
 
@@ -203,8 +555,8 @@ function Prescriptions({
             </h2>
 
             <p>
-              Your prescribed medicines and treatment information
-              will appear here.
+              Your prescribed medicines and treatment
+              information will appear here.
             </p>
 
             <button
@@ -220,63 +572,96 @@ function Prescriptions({
 
           <div className="prescriptions-list">
 
-            {prescriptions.map((prescription) => (
+            {prescriptions.map(
+              (prescription) => (
 
-              <div
-                className="prescription-item"
-                key={prescription.id}
-              >
+                <div
+                  className="prescription-item"
+                  key={prescription.id}
+                >
 
-                <div className="prescription-icon">
-                  💊
-                </div>
+                  <div className="prescription-icon">
+                    💊
+                  </div>
 
 
-                <div className="prescription-details">
+                  <div className="prescription-details">
 
-                  <div className="prescription-top">
+                    <div className="prescription-top">
 
-                    <div>
+                      <div>
 
-                      <h3>
-                        {prescription.medicine}
-                      </h3>
+                        <h3>
+                          {prescription.medicine}
+                        </h3>
 
-                      <p>
-                        {prescription.dosage}
-                        {" • "}
-                        {prescription.frequency}
-                      </p>
+                        <p>
+                          {prescription.dosage}
+                          {" • "}
+                          {prescription.frequency}
+                        </p>
+
+                      </div>
+
+                      <span className="prescription-status">
+                        {prescription.status}
+                      </span>
 
                     </div>
 
 
-                    <span className="prescription-status">
-                      {prescription.status}
-                    </span>
+                    <p className="doctor-name">
+                      👨‍⚕️{" "}
+                      {prescription.doctor ||
+                        "Doctor not provided"}
+                    </p>
+
+
+                    <p className="prescription-dates">
+                      📅{" "}
+                      {formatDate(
+                        prescription.startDate
+                      )}
+
+                      {prescription.endDate &&
+                        ` → ${formatDate(
+                          prescription.endDate
+                        )}`}
+                    </p>
 
                   </div>
 
 
-                  <p className="doctor-name">
-                    👨‍⚕️{" "}
-                    {prescription.doctor ||
-                      "Doctor not provided"}
-                  </p>
+                  <div className="prescription-action-buttons">
 
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openEditForm(
+                          prescription
+                        )
+                      }
+                    >
+                      ✏️
+                    </button>
 
-                  <p className="prescription-dates">
-                    📅 {prescription.startDate}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        deletePrescription(
+                          prescription.id
+                        )
+                      }
+                    >
+                      🗑️
+                    </button>
 
-                    {prescription.endDate &&
-                      ` → ${prescription.endDate}`}
-                  </p>
+                  </div>
 
                 </div>
 
-              </div>
-
-            ))}
+              )
+            )}
 
           </div>
 
@@ -285,7 +670,8 @@ function Prescriptions({
       </section>
 
 
-      {/* ================= ADD PRESCRIPTION MODAL ================= */}
+      {/* ================= ADD / EDIT MODAL ================= */}
+
       {showForm && (
 
         <div className="prescription-modal-overlay">
@@ -295,7 +681,9 @@ function Prescriptions({
             <div className="prescription-modal-header">
 
               <h2>
-                Add Prescription
+                {editingPrescription
+                  ? "Edit Prescription"
+                  : "Add Prescription"}
               </h2>
 
               <button
@@ -312,6 +700,7 @@ function Prescriptions({
             <form onSubmit={handleSubmit}>
 
               {/* MEDICINE */}
+
               <label>
                 Medicine Name
               </label>
@@ -326,6 +715,7 @@ function Prescriptions({
 
 
               {/* DOSAGE */}
+
               <label>
                 Dosage
               </label>
@@ -340,6 +730,7 @@ function Prescriptions({
 
 
               {/* FREQUENCY */}
+
               <label>
                 Frequency
               </label>
@@ -351,12 +742,15 @@ function Prescriptions({
               >
                 <option>Once Daily</option>
                 <option>Twice Daily</option>
-                <option>Three Times Daily</option>
+                <option>
+                  Three Times Daily
+                </option>
                 <option>As Needed</option>
               </select>
 
 
               {/* DOCTOR */}
+
               <label>
                 Doctor Name
               </label>
@@ -371,6 +765,7 @@ function Prescriptions({
 
 
               {/* START DATE */}
+
               <label>
                 Start Date
               </label>
@@ -384,6 +779,7 @@ function Prescriptions({
 
 
               {/* END DATE */}
+
               <label>
                 End Date (Optional)
               </label>
@@ -397,6 +793,7 @@ function Prescriptions({
 
 
               {/* BUTTONS */}
+
               <div className="prescription-modal-buttons">
 
                 <button
@@ -407,12 +804,16 @@ function Prescriptions({
                   Cancel
                 </button>
 
-
                 <button
                   type="submit"
                   className="save-prescription-btn"
+                  disabled={saving}
                 >
-                  Save Prescription
+                  {saving
+                    ? "Saving..."
+                    : editingPrescription
+                    ? "Update Prescription"
+                    : "Save Prescription"}
                 </button>
 
               </div>

@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./MedicalRecords.css";
+import { supabase } from "./supabase";
 
-function MedicalRecords({ onBack, records = [], setRecords }) {
+function MedicalRecords({ onBack }) {
+  const [records, setRecords] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const [editingRecord, setEditingRecord] = useState(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -12,12 +19,87 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
     description: "",
   });
 
+  // Load records from Supabase
+  useEffect(() => {
+    loadRecords();
+  }, []);
+
+  const loadRecords = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setError("User is not logged in.");
+        return;
+      }
+
+      const { data, error: recordsError } = await supabase
+        .from("medical_records")
+        .select("*")
+        .eq("patient_id", user.id)
+        .order("record_date", { ascending: false });
+
+      if (recordsError) {
+        console.error("Load records error:", recordsError);
+        setError("Unable to load medical records.");
+        return;
+      }
+
+      const formattedRecords = (data || []).map((record) => ({
+        id: record.id,
+        title: record.record_type,
+        type: record.record_type,
+        doctor: record.doctor_name || "",
+        date: record.record_date || "",
+        description: record.description || "",
+      }));
+
+      setRecords(formattedRecords);
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      setError("Something went wrong while loading records.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openForm = () => {
+    setEditingRecord(null);
+
+    setFormData({
+      title: "",
+      type: "Medical Report",
+      doctor: "",
+      date: "",
+      description: "",
+    });
+
+    setShowForm(true);
+  };
+
+  const openEditForm = (record) => {
+    setEditingRecord(record);
+
+    setFormData({
+      title: record.title || "",
+      type: record.type || "Medical Report",
+      doctor: record.doctor || "",
+      date: record.date || "",
+      description: record.description || "",
+    });
+
     setShowForm(true);
   };
 
   const closeForm = () => {
     setShowForm(false);
+    setEditingRecord(null);
 
     setFormData({
       title: "",
@@ -37,7 +119,7 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.title || !formData.date) {
@@ -45,17 +127,114 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
       return;
     }
 
-    const newRecord = {
-      id: Date.now(),
-      ...formData,
-    };
+    try {
+      setSaving(true);
+      setError("");
 
-    setRecords((previousRecords) => [
-      ...previousRecords,
-      newRecord,
-    ]);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    closeForm();
+      if (userError || !user) {
+        setError("User is not logged in.");
+        return;
+      }
+
+      if (editingRecord) {
+        // UPDATE existing record
+        const { error: updateError } = await supabase
+          .from("medical_records")
+          .update({
+            record_type: formData.type,
+            diagnosis: formData.title,
+            description: formData.description,
+            doctor_name: formData.doctor,
+            record_date: formData.date,
+          })
+          .eq("id", editingRecord.id)
+          .eq("patient_id", user.id);
+
+        if (updateError) {
+          console.error("Update record error:", updateError);
+          setError("Unable to update medical record.");
+          return;
+        }
+
+        alert("Medical record updated successfully! ✅");
+      } else {
+        // INSERT new record
+        const { error: insertError } = await supabase
+          .from("medical_records")
+          .insert({
+            patient_id: user.id,
+            record_type: formData.type,
+            diagnosis: formData.title,
+            description: formData.description,
+            doctor_name: formData.doctor,
+            record_date: formData.date,
+          });
+
+        if (insertError) {
+          console.error("Insert record error:", insertError);
+          setError("Unable to save medical record.");
+          return;
+        }
+
+        alert("Medical record saved successfully! ✅");
+      }
+
+      closeForm();
+      await loadRecords();
+    } catch (error) {
+      console.error("Save error:", error);
+      setError("Something went wrong while saving the record.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteRecord = async (recordId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this medical record?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setError("User is not logged in.");
+        return;
+      }
+
+      const { error: deleteError } = await supabase
+        .from("medical_records")
+        .delete()
+        .eq("id", recordId)
+        .eq("patient_id", user.id);
+
+      if (deleteError) {
+        console.error("Delete record error:", deleteError);
+        setError("Unable to delete medical record.");
+        return;
+      }
+
+      alert("Medical record deleted successfully! 🗑️");
+
+      await loadRecords();
+    } catch (error) {
+      console.error("Delete error:", error);
+      setError("Something went wrong while deleting the record.");
+    }
   };
 
   const prescriptionCount = records.filter(
@@ -91,7 +270,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
         </button>
       </header>
 
-
       <section className="records-summary">
 
         <div className="record-summary-card">
@@ -105,7 +283,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
           </div>
         </div>
 
-
         <div className="record-summary-card">
           <div className="record-summary-icon">
             🏥
@@ -116,7 +293,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
             <strong>{reportCount}</strong>
           </div>
         </div>
-
 
         <div className="record-summary-card">
           <div className="record-summary-icon">
@@ -130,7 +306,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
         </div>
 
       </section>
-
 
       <section className="all-records-card">
 
@@ -150,8 +325,27 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
 
         </div>
 
+        {error && (
+          <div className="token-error">
+            ⚠️ {error}
+          </div>
+        )}
 
-        {records.length === 0 ? (
+        {loading ? (
+
+          <div className="records-empty-state">
+            <div className="records-empty-icon">
+              🔄
+            </div>
+
+            <h2>Loading medical records...</h2>
+
+            <p>
+              Please wait while your records are loaded.
+            </p>
+          </div>
+
+        ) : records.length === 0 ? (
 
           <div className="records-empty-state">
 
@@ -192,17 +386,22 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                     : "📋"}
                 </div>
 
-
                 <div className="medical-record-details">
 
                   <h3>{record.title}</h3>
 
                   <p>
-                    {record.type} • {record.doctor || "Doctor not provided"}
+                    {record.type} •{" "}
+                    {record.doctor || "Doctor not provided"}
                   </p>
 
                   <span>
-                    Date: {record.date}
+                    Date:{" "}
+                    {record.date
+                      ? new Date(record.date + "T00:00:00").toLocaleDateString(
+                        "en-GB"
+                      )
+                    : "Date not provided"}
                   </span>
 
                   {record.description && (
@@ -210,6 +409,24 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                       {record.description}
                     </p>
                   )}
+
+                </div>
+
+                <div className="record-action-buttons">
+
+                  <button
+                    type="button"
+                    onClick={() => openEditForm(record)}
+                  >
+                    ✏️
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteRecord(record.id)}
+                  >
+                    🗑️
+                  </button>
 
                 </div>
 
@@ -223,7 +440,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
 
       </section>
 
-
       {showForm && (
 
         <div className="record-modal-overlay">
@@ -232,7 +448,11 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
 
             <div className="modal-header">
 
-              <h2>Add Medical Record</h2>
+              <h2>
+                {editingRecord
+                  ? "Edit Medical Record"
+                  : "Add Medical Record"}
+              </h2>
 
               <button
                 type="button"
@@ -243,7 +463,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
               </button>
 
             </div>
-
 
             <form onSubmit={handleSubmit}>
 
@@ -256,7 +475,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                 value={formData.title}
                 onChange={handleChange}
               />
-
 
               <label>Record Type</label>
 
@@ -271,7 +489,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                 <option>Other</option>
               </select>
 
-
               <label>Doctor / Hospital</label>
 
               <input
@@ -282,7 +499,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                 onChange={handleChange}
               />
 
-
               <label>Date</label>
 
               <input
@@ -292,7 +508,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                 onChange={handleChange}
               />
 
-
               <label>Description</label>
 
               <textarea
@@ -301,7 +516,6 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                 value={formData.description}
                 onChange={handleChange}
               />
-
 
               <div className="modal-buttons">
 
@@ -316,8 +530,13 @@ function MedicalRecords({ onBack, records = [], setRecords }) {
                 <button
                   type="submit"
                   className="save-record-btn"
+                  disabled={saving}
                 >
-                  Save Record
+                  {saving
+                    ? "Saving..."
+                    : editingRecord
+                    ? "Update Record"
+                    : "Save Record"}
                 </button>
 
               </div>

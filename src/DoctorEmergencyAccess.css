@@ -1,0 +1,718 @@
+/* =========================================================
+   MAIN PAGE
+========================================================= */
+
+.doctor-access-page {
+  min-height: 100vh;
+  background: #f5f8fc;
+  color: #172033;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.doctor-access-header {
+  height: 76px;
+  padding: 0 40px;
+  background: white;
+  border-bottom: 1px solid #e5eaf1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doctor-access-logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.doctor-access-logo {
+  width: 42px;
+  height: 42px;
+
+  border-radius: 10px;
+
+  background: #e63946;
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.doctor-access-logo-section h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.doctor-access-logo-section p {
+  margin: 2px 0 0;
+
+  color: #687386;
+  font-size: 13px;
+}
+
+.doctor-back-btn {
+  border: none;
+
+  background: #eef2f7;
+  color: #263246;
+
+  padding: 11px 18px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-weight: 600;
+
+  transition: 0.2s ease;
+}
+
+.doctor-back-btn:hover {
+  background: #e2e8f0;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.doctor-access-content {
+  min-height: calc(100vh - 76px);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 40px 20px;
+}
+
+
+/* =========================================================
+   TOKEN VERIFICATION CARD
+========================================================= */
+
+.doctor-access-card {
+  width: 100%;
+  max-width: 560px;
+
+  background: white;
+
+  border-radius: 18px;
+
+  padding: 42px;
+
+  box-shadow: 0 12px 35px rgba(28, 43, 70, 0.08);
+
+  text-align: center;
+}
+
+.doctor-access-icon {
+  width: 70px;
+  height: 70px;
+
+  margin: 0 auto 18px;
+
+  border-radius: 50%;
+
+  background: #eef5ff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 32px;
+}
+
+.doctor-access-tag {
+  display: inline-block;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 1px;
+
+  color: #2864d7;
+
+  margin-bottom: 10px;
+}
+
+.doctor-access-card h1 {
+  margin: 0;
+
+  font-size: 30px;
+}
+
+.doctor-access-description {
+  color: #697586;
+
+  line-height: 1.6;
+
+  margin: 14px auto 30px;
+
+  max-width: 470px;
+}
+
+
+/* =========================================================
+   TOKEN INPUT
+========================================================= */
+
+.token-input-section {
+  text-align: left;
+}
+
+.token-input-section label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.token-input-section input {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 15px 16px;
+
+  border: 1px solid #d8dee8;
+
+  border-radius: 10px;
+
+  font-size: 18px;
+
+  letter-spacing: 2px;
+
+  outline: none;
+
+  text-align: center;
+}
+
+.token-input-section input:focus {
+  border-color: #2864d7;
+
+  box-shadow: 0 0 0 3px rgba(40, 100, 215, 0.1);
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.token-error {
+  margin-top: 14px;
+
+  padding: 12px;
+
+  border-radius: 8px;
+
+  background: #fff1f1;
+
+  color: #c62828;
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   VERIFY BUTTON
+========================================================= */
+
+.verify-token-btn {
+  width: 100%;
+
+  margin-top: 20px;
+
+  padding: 14px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: #2864d7;
+
+  color: white;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.verify-token-btn:hover {
+  background: #1f54bd;
+}
+
+.verify-token-btn:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   CONTROLLED ACCESS INFORMATION
+========================================================= */
+
+.access-information {
+  margin-top: 28px;
+
+  padding: 16px;
+
+  border-radius: 10px;
+
+  background: #f6f9fd;
+
+  display: flex;
+
+  gap: 12px;
+
+  text-align: left;
+}
+
+.information-icon {
+  font-size: 22px;
+}
+
+.access-information strong {
+  font-size: 14px;
+}
+
+.access-information p {
+  margin: 5px 0 0;
+
+  color: #687386;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   VERIFIED EMERGENCY MEDICAL CARD
+========================================================= */
+
+.emergency-medical-card {
+  width: 100%;
+  max-width: 850px;
+
+  background: white;
+
+  border-radius: 20px;
+
+  padding: 40px;
+
+  box-shadow: 0 15px 45px rgba(28, 43, 70, 0.10);
+
+  border: 1px solid #e3e9f2;
+}
+
+
+/* =========================================================
+   SUCCESS HEADER
+========================================================= */
+
+.emergency-success-header {
+  display: flex;
+
+  align-items: center;
+
+  gap: 18px;
+
+  padding-bottom: 26px;
+
+  border-bottom: 1px solid #e8edf4;
+}
+
+.success-icon {
+  width: 58px;
+  height: 58px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #e8f8ef;
+
+  color: #16834b;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.emergency-success-header span {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #16834b;
+
+  font-size: 12px;
+
+  font-weight: 800;
+
+  letter-spacing: 1.2px;
+}
+
+.emergency-success-header h1 {
+  margin: 0;
+
+  color: #172b4d;
+
+  font-size: 32px;
+
+  line-height: 1.2;
+}
+
+
+/* =========================================================
+   PATIENT INFORMATION
+========================================================= */
+
+.patient-basic-info {
+  padding: 24px 0 20px;
+}
+
+.patient-basic-info h2 {
+  margin: 0 0 7px;
+
+  color: #172b4d;
+
+  font-size: 19px;
+}
+
+.patient-name {
+  font-size: 17px;
+
+  color: #40516b;
+
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   EMERGENCY ALERT
+========================================================= */
+
+.critical-alert {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 13px;
+
+  padding: 16px 18px;
+
+  margin-bottom: 24px;
+
+  background: #fff7ed;
+
+  border: 1px solid #fed7aa;
+
+  border-radius: 12px;
+}
+
+.critical-alert > span {
+  font-size: 22px;
+
+  line-height: 1;
+}
+
+.critical-alert strong {
+  display: block;
+
+  color: #9a3412;
+
+  font-size: 15px;
+
+  margin-bottom: 4px;
+}
+
+.critical-alert p {
+  margin: 0;
+
+  color: #7c4a2d;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   MEDICAL INFORMATION GRID
+========================================================= */
+
+.medical-info-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 16px;
+
+  margin-bottom: 18px;
+}
+
+.medical-info-box {
+  min-height: 105px;
+
+  padding: 20px;
+
+  box-sizing: border-box;
+
+  background: #f7faff;
+
+  border: 1px solid #e1e9f5;
+
+  border-radius: 13px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: space-between;
+
+  gap: 12px;
+
+  transition: 0.2s ease;
+}
+
+.medical-info-box:hover {
+  border-color: #cbd9ed;
+
+  transform: translateY(-1px);
+}
+
+.medical-info-box span {
+  color: #718096;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+.medical-info-box strong {
+  color: #172b4d;
+
+  font-size: 17px;
+
+  line-height: 1.4;
+
+  word-break: break-word;
+}
+
+
+/* =========================================================
+   EMERGENCY CONTACT
+========================================================= */
+
+.emergency-contact-box {
+  padding: 20px;
+
+  background: #f7faff;
+
+  border: 1px solid #e1e9f5;
+
+  border-radius: 13px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 10px;
+
+  margin-bottom: 20px;
+}
+
+.emergency-contact-box span {
+  color: #718096;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+.emergency-contact-box strong {
+  color: #172b4d;
+
+  font-size: 17px;
+}
+
+
+/* =========================================================
+   SECURITY NOTE
+========================================================= */
+
+.minimum-information-note {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 12px;
+
+  padding: 16px 18px;
+
+  background: #f1f6ff;
+
+  border: 1px solid #dce8fa;
+
+  border-radius: 12px;
+
+  margin-bottom: 22px;
+}
+
+.minimum-information-note > span {
+  font-size: 20px;
+
+  line-height: 1.2;
+}
+
+.minimum-information-note p {
+  margin: 0;
+
+  color: #52627a;
+
+  font-size: 13px;
+
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   CLOSE ACCESS BUTTON
+========================================================= */
+
+.close-emergency-access-btn {
+  width: 100%;
+
+  padding: 14px 20px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: #172b4d;
+
+  color: white;
+
+  font-size: 15px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.close-emergency-access-btn:hover {
+  background: #0f1f38;
+
+  transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 700px) {
+
+  .doctor-access-header {
+    padding: 0 18px;
+  }
+
+  .doctor-access-header {
+    height: 70px;
+  }
+
+  .doctor-back-btn {
+    padding: 9px 12px;
+
+    font-size: 13px;
+  }
+
+  .doctor-access-content {
+    padding: 25px 15px;
+
+    align-items: flex-start;
+  }
+
+  .doctor-access-card {
+    padding: 28px 20px;
+  }
+
+  .doctor-access-card h1 {
+    font-size: 25px;
+  }
+
+  .emergency-medical-card {
+    padding: 25px 20px;
+
+    border-radius: 16px;
+  }
+
+  .emergency-success-header {
+    gap: 13px;
+  }
+
+  .success-icon {
+    width: 48px;
+    height: 48px;
+
+    font-size: 24px;
+  }
+
+  .emergency-success-header h1 {
+    font-size: 24px;
+  }
+
+  .medical-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+@media (max-width: 450px) {
+
+  .doctor-access-logo-section p {
+    display: none;
+  }
+
+  .doctor-access-logo-section h2 {
+    font-size: 17px;
+  }
+
+  .doctor-back-btn {
+    font-size: 12px;
+  }
+
+  .emergency-success-header {
+    align-items: flex-start;
+  }
+
+  .emergency-success-header h1 {
+    font-size: 21px;
+  }
+
+  .patient-basic-info {
+    padding-top: 20px;
+  }
+}

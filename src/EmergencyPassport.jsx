@@ -1,27 +1,388 @@
 import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 import "./EmergencyPassport.css";
+import { supabase } from "./supabase";
 
-function EmergencyPassport({ onBack, healthData }) {
+function EmergencyPassport({
+  onBack,
+  healthData,
+  setHealthData,
+}) {
   const [emergencyMode, setEmergencyMode] = useState(false);
   const [token, setToken] = useState("");
   const [userLocation, setUserLocation] = useState(null);
 
-  // Generate temporary doctor access token
-  const generateToken = () => {
-    const newToken =
-      Math.random().toString(36).substring(2, 6).toUpperCase() +
-      "-" +
-      Math.random().toString(36).substring(2, 6).toUpperCase();
+  const [loading, setLoading] = useState(true);
+  const [generatingToken, setGeneratingToken] = useState(false);
 
-    setToken(newToken);
+  // =========================================================
+  // DISPLAY FALLBACK
+  // =========================================================
+
+  const displayValue = (
+    value,
+    fallback = "Not provided"
+  ) => {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+
+    const text = String(value).trim();
+
+    return text !== "" ? text : fallback;
   };
 
-  // Get user's current location when emergency mode is activated
+  // =========================================================
+  // GENERATE RANDOM TOKEN
+  // =========================================================
+
+  const createRandomToken = () => {
+    const part1 = Math.random()
+      .toString(36)
+      .substring(2, 6)
+      .toUpperCase();
+
+    const part2 = Math.random()
+      .toString(36)
+      .substring(2, 6)
+      .toUpperCase();
+
+    return `${part1}-${part2}`;
+  };
+
+  // =========================================================
+  // SAVE EMERGENCY PASSPORT TO SUPABASE
+  // =========================================================
+
+  const saveEmergencyPassport = async (
+    user,
+    dataToSave
+  ) => {
+    if (!user) {
+      return false;
+    }
+
+    const emergencySummary = `
+Patient: ${displayValue(
+      dataToSave?.fullName,
+      "Patient"
+    )}
+Blood Group: ${displayValue(
+      dataToSave?.bloodGroup
+    )}
+Allergies: ${displayValue(
+      dataToSave?.allergies,
+      "None provided"
+    )}
+Medical Conditions: ${displayValue(
+      dataToSave?.medicalConditions,
+      "None provided"
+    )}
+Current Medications: ${displayValue(
+      dataToSave?.currentMedications,
+      "None provided"
+    )}
+Emergency Contact: ${
+      dataToSave?.emergencyContactName
+        ? `${dataToSave.emergencyContactName}${
+            dataToSave?.emergencyPhone
+              ? ` (${dataToSave.emergencyPhone})`
+              : ""
+          }`
+        : "Not provided"
+    }
+    `.trim();
+
+    const { error } = await supabase
+      .from("emergency_passports")
+      .upsert(
+        {
+          patient_id: user.id,
+
+          emergency_summary: emergencySummary,
+
+          blood_group:
+            dataToSave?.bloodGroup || null,
+
+          allergies:
+            dataToSave?.allergies || null,
+
+          critical_conditions:
+            dataToSave?.medicalConditions || null,
+
+          current_medications:
+            dataToSave?.currentMedications || null,
+
+          emergency_contact:
+            dataToSave?.emergencyContactName
+              ? `${dataToSave.emergencyContactName}${
+                  dataToSave?.emergencyPhone
+                    ? ` - ${dataToSave.emergencyPhone}`
+                    : ""
+                }`
+              : null,
+
+          is_active: true,
+
+          updated_at:
+            new Date().toISOString(),
+        },
+        {
+          onConflict: "patient_id",
+        }
+      );
+
+    if (error) {
+      console.error(
+        "Emergency passport save error:",
+        error
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+  // =========================================================
+  // LOAD EXISTING DATA
+  // =========================================================
+
   useEffect(() => {
-    if (emergencyMode && navigator.geolocation) {
+    const loadEmergencyData = async () => {
+      try {
+        // =====================================================
+        // GET CURRENT USER
+        // =====================================================
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.error(
+            "Emergency passport user error:",
+            userError
+          );
+
+          setLoading(false);
+          return;
+        }
+
+        // =====================================================
+        // LOAD PERSONAL PROFILE
+        // =====================================================
+
+        const {
+          data: profile,
+          error: profileError,
+        } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error(
+            "Profile loading error:",
+            profileError
+          );
+        }
+
+        // =====================================================
+        // LOAD HEALTH PROFILE
+        // =====================================================
+
+        const {
+          data: healthProfile,
+          error: healthError,
+        } = await supabase
+          .from("health_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (healthError) {
+          console.error(
+            "Health profile loading error:",
+            healthError
+          );
+        }
+
+        // =====================================================
+        // CREATE FRESH HEALTH DATA
+        // =====================================================
+
+        const freshHealthData = {
+          ...healthData,
+
+          // Personal information
+          fullName:
+            profile?.full_name ||
+            healthData?.fullName ||
+            user.user_metadata?.full_name ||
+            "",
+
+          dateOfBirth:
+            profile?.date_of_birth ||
+            healthData?.dateOfBirth ||
+            "",
+
+          gender:
+            profile?.gender ||
+            healthData?.gender ||
+            "",
+
+          phone:
+            profile?.phone ||
+            healthData?.phone ||
+            "",
+
+          email:
+            profile?.email ||
+            user.email ||
+            healthData?.email ||
+            "",
+
+          address:
+            profile?.address ||
+            healthData?.address ||
+            "",
+
+          // Health information
+          bloodGroup:
+            healthProfile?.blood_group ||
+            healthData?.bloodGroup ||
+            "",
+
+          allergies:
+            healthProfile?.allergies ||
+            healthData?.allergies ||
+            "",
+
+          medicalConditions:
+            healthProfile?.chronic_conditions ||
+            healthData?.medicalConditions ||
+            "",
+
+          currentMedications:
+            healthProfile?.current_medications ||
+            healthData?.currentMedications ||
+            "",
+
+          // Emergency contact
+          emergencyContactName:
+            healthProfile?.emergency_contact_name ||
+            healthData?.emergencyContactName ||
+            "",
+
+          emergencyPhone:
+            healthProfile?.emergency_contact_phone ||
+            healthData?.emergencyPhone ||
+            "",
+
+          // Additional information
+          height:
+            healthProfile?.height ||
+            healthData?.height ||
+            "",
+
+          weight:
+            healthProfile?.weight ||
+            healthData?.weight ||
+            "",
+
+          emergencyRelationship:
+            healthProfile?.emergency_relationship ||
+            healthData?.emergencyRelationship ||
+            "",
+        };
+
+        // =====================================================
+        // UPDATE REACT STATE
+        // =====================================================
+
+        setHealthData(freshHealthData);
+
+        // =====================================================
+        // SAVE FRESH DATA TO EMERGENCY PASSPORT
+        // =====================================================
+
+        await saveEmergencyPassport(
+          user,
+          freshHealthData
+        );
+
+        // =====================================================
+        // LOAD ACTIVE EMERGENCY TOKEN
+        // =====================================================
+
+        const {
+          data: accessData,
+          error: accessError,
+        } = await supabase
+          .from("emergency_access")
+          .select("*")
+          .eq("patient_id", user.id)
+          .eq("is_active", true)
+          .gt(
+            "expires_at",
+            new Date().toISOString()
+          )
+          .order("created_at", {
+            ascending: false,
+          })
+          .limit(1)
+          .maybeSingle();
+
+        if (accessError) {
+          console.error(
+            "Emergency access loading error:",
+            accessError
+          );
+        }
+
+        if (accessData) {
+          setToken(
+            accessData.access_token
+          );
+        } else {
+          setToken("");
+        }
+      } catch (error) {
+        console.error(
+          "Emergency passport loading error:",
+          error
+        );
+      }
+
+      setLoading(false);
+    };
+
+    loadEmergencyData();
+
+    // We intentionally load the latest
+    // database data once when this page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // =========================================================
+  // GET USER LOCATION
+  // =========================================================
+
+  useEffect(() => {
+    if (
+      emergencyMode &&
+      navigator.geolocation
+    ) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation([
@@ -30,42 +391,238 @@ function EmergencyPassport({ onBack, healthData }) {
           ]);
         },
         () => {
-          // Default location if permission is denied
-          setUserLocation([28.9845, 77.7064]);
+          // Default demo location
+          setUserLocation([
+            28.9845,
+            77.7064,
+          ]);
         }
       );
     }
   }, [emergencyMode]);
 
-  // Sample nearby hospitals
+  // =========================================================
+  // GENERATE DOCTOR EMERGENCY TOKEN
+  // =========================================================
+
+  const generateToken = async () => {
+    try {
+      setGeneratingToken(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        alert(
+          "User session not found. Please sign in again."
+        );
+
+        setGeneratingToken(false);
+        return;
+      }
+
+      // =====================================================
+      // DEACTIVATE OLD ACTIVE TOKENS
+      // =====================================================
+
+      const {
+        error: deactivateError,
+      } = await supabase
+        .from("emergency_access")
+        .update({
+          is_active: false,
+        })
+        .eq("patient_id", user.id)
+        .eq("is_active", true);
+
+      if (deactivateError) {
+        console.error(
+          "Old token deactivation error:",
+          deactivateError
+        );
+      }
+
+      // =====================================================
+      // CREATE NEW TOKEN
+      // =====================================================
+
+      const newToken = createRandomToken();
+
+      // Token valid for 30 minutes
+      const expiresAt = new Date(
+        Date.now() + 30 * 60 * 1000
+      ).toISOString();
+
+      // =====================================================
+      // SAVE TOKEN
+      // =====================================================
+
+      const {
+        data: accessData,
+        error: accessError,
+      } = await supabase
+        .from("emergency_access")
+        .insert({
+          patient_id: user.id,
+
+          access_token: newToken,
+
+          authorized_user:
+            "Emergency Healthcare Professional",
+
+          purpose:
+            "Emergency access to critical medical information",
+
+          expires_at: expiresAt,
+
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (accessError) {
+        console.error(
+          "Token save error:",
+          accessError
+        );
+
+        alert(
+          "Could not generate emergency token: " +
+            accessError.message
+        );
+
+        setGeneratingToken(false);
+        return;
+      }
+
+      // =====================================================
+      // UPDATE UI
+      // =====================================================
+
+      setToken(
+        accessData.access_token
+      );
+
+      // =====================================================
+      // CREATE ACCESS LOG
+      // =====================================================
+
+      const {
+        error: logError,
+      } = await supabase
+        .from("emergency_access_logs")
+        .insert({
+          patient_id: user.id,
+
+          access_id: accessData.id,
+
+          accessed_by:
+            "Patient - Emergency Token Generation",
+
+          access_type:
+            "Emergency access token generated",
+
+          accessed_at:
+            new Date().toISOString(),
+        });
+
+      if (logError) {
+        console.error(
+          "Emergency access log error:",
+          logError
+        );
+      }
+
+      alert(
+        "Emergency access token generated successfully! 🔐"
+      );
+    } catch (error) {
+      console.error(
+        "Token generation error:",
+        error
+      );
+
+      alert(
+        "Something went wrong while generating the token."
+      );
+    }
+
+    setGeneratingToken(false);
+  };
+
+  // =========================================================
+  // NEARBY HOSPITALS
+  // =========================================================
+
   const hospitals = [
     {
       id: 1,
       name: "City Hospital",
-      position: [28.9845, 77.7050],
+      position: [
+        28.9845,
+        77.7050,
+      ],
     },
+
     {
       id: 2,
       name: "Emergency Care Hospital",
-      position: [28.9900, 77.7100],
+      position: [
+        28.9900,
+        77.7100,
+      ],
     },
+
     {
       id: 3,
       name: "General Medical Center",
-      position: [28.9780, 77.7000],
+      position: [
+        28.9780,
+        77.7000,
+      ],
     },
   ];
 
-  // Display fallback text when information is empty
-  const displayValue = (value, fallback = "Not provided") => {
-    return value && value.trim() !== "" ? value : fallback;
-  };
+  // =========================================================
+  // LOADING SCREEN
+  // =========================================================
+
+  if (loading) {
+    return (
+      <div className="emergency-page">
+        <div
+          style={{
+            padding: "60px",
+            textAlign: "center",
+          }}
+        >
+          <h2>
+            Loading Emergency Medical Passport...
+          </h2>
+
+          <p>
+            Preparing your emergency information.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // MAIN UI
+  // =========================================================
 
   return (
     <div className="emergency-page">
 
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+
       <header className="emergency-header">
+
         <div className="emergency-logo-section">
 
           <div className="emergency-logo">
@@ -74,7 +631,10 @@ function EmergencyPassport({ onBack, healthData }) {
 
           <div>
             <h2>Healthcare</h2>
-            <p>Emergency Medical Passport</p>
+
+            <p>
+              Emergency Medical Passport
+            </p>
           </div>
 
         </div>
@@ -85,13 +645,20 @@ function EmergencyPassport({ onBack, healthData }) {
         >
           ← Back to Dashboard
         </button>
+
       </header>
 
 
-      {/* MAIN CONTENT */}
+      {/* =====================================================
+          MAIN CONTENT
+      ====================================================== */}
+
       <main className="emergency-content">
 
-        {/* PAGE TITLE */}
+        {/* ===================================================
+            PAGE TITLE
+        ==================================================== */}
+
         <div className="emergency-page-title">
 
           <div>
@@ -105,8 +672,8 @@ function EmergencyPassport({ onBack, healthData }) {
             </h1>
 
             <p>
-              Important healthcare information that can be quickly accessed
-              during an emergency.
+              Important healthcare information that can be
+              quickly accessed during an emergency.
             </p>
 
           </div>
@@ -114,9 +681,15 @@ function EmergencyPassport({ onBack, healthData }) {
 
           <button
             className={`emergency-mode-btn ${
-              emergencyMode ? "active" : ""
+              emergencyMode
+                ? "active"
+                : ""
             }`}
-            onClick={() => setEmergencyMode(!emergencyMode)}
+            onClick={() =>
+              setEmergencyMode(
+                !emergencyMode
+              )
+            }
           >
             🚨{" "}
             {emergencyMode
@@ -127,8 +700,12 @@ function EmergencyPassport({ onBack, healthData }) {
         </div>
 
 
-        {/* EMERGENCY MODE STATUS */}
+        {/* ===================================================
+            EMERGENCY MODE STATUS
+        ==================================================== */}
+
         {emergencyMode && (
+
           <div className="emergency-active-banner">
 
             <div className="pulse-icon">
@@ -142,17 +719,21 @@ function EmergencyPassport({ onBack, healthData }) {
               </strong>
 
               <p>
-                Your critical medical information is now ready for
-                emergency access.
+                Your critical medical information is now
+                ready for emergency access.
               </p>
 
             </div>
 
           </div>
+
         )}
 
 
-        {/* EMERGENCY MEDICAL SUMMARY */}
+        {/* ===================================================
+            EMERGENCY MEDICAL SUMMARY
+        ==================================================== */}
+
         <section className="emergency-summary-card">
 
           <div className="card-heading">
@@ -168,7 +749,8 @@ function EmergencyPassport({ onBack, healthData }) {
               </h2>
 
               <p>
-                Critical information for healthcare professionals
+                Critical information for healthcare
+                professionals
               </p>
 
             </div>
@@ -178,56 +760,105 @@ function EmergencyPassport({ onBack, healthData }) {
 
           <div className="emergency-grid">
 
+            {/* PATIENT NAME */}
+
             <div className="info-box">
-              <span>Patient Name</span>
+
+              <span>
+                Patient Name
+              </span>
+
               <strong>
-                {displayValue(healthData?.fullName, "Patient")}
+                {displayValue(
+                  healthData?.fullName,
+                  "Patient"
+                )}
               </strong>
+
             </div>
 
 
+            {/* BLOOD GROUP */}
+
             <div className="info-box">
-              <span>Blood Group</span>
+
+              <span>
+                Blood Group
+              </span>
+
               <strong>
-                {displayValue(healthData?.bloodGroup)}
+                {displayValue(
+                  healthData?.bloodGroup
+                )}
               </strong>
+
             </div>
 
 
+            {/* ALLERGIES */}
+
             <div className="info-box">
-              <span>Allergies</span>
+
+              <span>
+                Allergies
+              </span>
+
               <strong>
-                {displayValue(healthData?.allergies, "No information")}
+                {displayValue(
+                  healthData?.allergies,
+                  "No information"
+                )}
               </strong>
+
             </div>
 
 
+            {/* MEDICAL CONDITIONS */}
+
             <div className="info-box">
-              <span>Medical Conditions</span>
+
+              <span>
+                Medical Conditions
+              </span>
+
               <strong>
                 {displayValue(
                   healthData?.medicalConditions,
                   "No information"
                 )}
               </strong>
+
             </div>
 
 
+            {/* MEDICATIONS */}
+
             <div className="info-box">
-              <span>Current Medication</span>
+
+              <span>
+                Current Medication
+              </span>
+
               <strong>
                 {displayValue(
                   healthData?.currentMedications,
                   "No medications added"
                 )}
               </strong>
+
             </div>
 
 
+            {/* EMERGENCY CONTACT */}
+
             <div className="info-box">
-              <span>Emergency Contact</span>
+
+              <span>
+                Emergency Contact
+              </span>
 
               <strong>
+
                 {healthData?.emergencyContactName
                   ? `${healthData.emergencyContactName}${
                       healthData.emergencyPhone
@@ -235,7 +866,9 @@ function EmergencyPassport({ onBack, healthData }) {
                         : ""
                     }`
                   : "Not provided"}
+
               </strong>
+
             </div>
 
           </div>
@@ -243,8 +876,12 @@ function EmergencyPassport({ onBack, healthData }) {
         </section>
 
 
-        {/* NEARBY HOSPITALS */}
+        {/* ===================================================
+            NEARBY HOSPITALS
+        ==================================================== */}
+
         {emergencyMode && (
+
           <section className="hospital-card">
 
             <div className="card-heading">
@@ -269,6 +906,7 @@ function EmergencyPassport({ onBack, healthData }) {
 
 
             {/* MAP */}
+
             <div className="map-container">
 
               {userLocation ? (
@@ -284,6 +922,7 @@ function EmergencyPassport({ onBack, healthData }) {
                 >
 
                   {/* MAP TILES */}
+
                   <TileLayer
                     attribution="&copy; OpenStreetMap contributors"
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -291,35 +930,57 @@ function EmergencyPassport({ onBack, healthData }) {
 
 
                   {/* USER LOCATION */}
-                  <Marker position={userLocation}>
+
+                  <Marker
+                    position={userLocation}
+                  >
+
                     <Popup>
                       📍 Your Current Location
                     </Popup>
+
                   </Marker>
 
 
                   {/* HOSPITAL MARKERS */}
-                  {hospitals.map((hospital) => (
-                    <Marker
-                      key={hospital.id}
-                      position={hospital.position}
-                    >
-                      <Popup>
-                        🏥 <strong>{hospital.name}</strong>
 
-                        <br />
+                  {hospitals.map(
+                    (hospital) => (
 
-                        Nearby emergency healthcare facility
-                      </Popup>
-                    </Marker>
-                  ))}
+                      <Marker
+                        key={hospital.id}
+                        position={
+                          hospital.position
+                        }
+                      >
+
+                        <Popup>
+
+                          🏥{" "}
+                          <strong>
+                            {hospital.name}
+                          </strong>
+
+                          <br />
+
+                          Nearby emergency
+                          healthcare facility
+
+                        </Popup>
+
+                      </Marker>
+
+                    )
+                  )}
 
                 </MapContainer>
 
               ) : (
 
                 <div className="map-loading">
+
                   📍 Getting your location...
+
                 </div>
 
               )}
@@ -327,11 +988,16 @@ function EmergencyPassport({ onBack, healthData }) {
             </div>
 
           </section>
+
         )}
 
 
-        {/* DOCTOR EMERGENCY TOKEN */}
+        {/* ===================================================
+            DOCTOR EMERGENCY TOKEN
+        ==================================================== */}
+
         {emergencyMode && (
+
           <section className="token-card">
 
             <div className="card-heading">
@@ -347,8 +1013,8 @@ function EmergencyPassport({ onBack, healthData }) {
                 </h2>
 
                 <p>
-                  Generate a secure temporary token for healthcare
-                  professionals.
+                  Generate a secure temporary token for
+                  healthcare professionals.
                 </p>
 
               </div>
@@ -371,7 +1037,8 @@ function EmergencyPassport({ onBack, healthData }) {
                   </h2>
 
                   <p>
-                    Temporary access for emergency medical information
+                    Temporary access for emergency
+                    medical information
                   </p>
 
                 </div>
@@ -379,8 +1046,11 @@ function EmergencyPassport({ onBack, healthData }) {
               ) : (
 
                 <p className="token-message">
-                  Generate a temporary secure token to allow a doctor
-                  to access your emergency medical information.
+
+                  Generate a temporary secure token to allow
+                  a doctor to access your emergency medical
+                  information.
+
                 </p>
 
               )}
@@ -389,13 +1059,19 @@ function EmergencyPassport({ onBack, healthData }) {
               <button
                 className="generate-token-btn"
                 onClick={generateToken}
+                disabled={generatingToken}
               >
-                🔐 Generate Doctor Token
+
+                {generatingToken
+                  ? "🔄 Generating..."
+                  : "🔐 Generate Doctor Token"}
+
               </button>
 
             </div>
 
           </section>
+
         )}
 
       </main>

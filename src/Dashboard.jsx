@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import "./Dashboard.css";
+import { supabase } from "./supabase";
 
 function Dashboard({
   onHealthProfile,
@@ -7,50 +9,513 @@ function Dashboard({
   onPrescriptions,
   onAppointments,
   onAIAssistant,
-
-  medicalRecords = [],
-  prescriptions = [],
-  appointments = [],
-  healthData = {},
+  onHealthcareResources,
+  onDoctorEmergencyAccess,
 }) {
+  // ================= DATA STATES =================
+
+  const [medicalRecords, setMedicalRecords] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+
+  const [healthData, setHealthData] = useState({
+    fullName: "",
+    dateOfBirth: "",
+    gender: "",
+    phone: "",
+    email: "",
+    address: "",
+    bloodGroup: "",
+    height: "",
+    weight: "",
+    allergies: "",
+    medicalConditions: "",
+    currentMedications: "",
+    emergencyContactName: "",
+    relationship: "",
+    emergencyPhone: "",
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  // ================= LOAD DASHBOARD DATA =================
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error("User error:", userError);
+        return;
+      }
+
+      // ==========================================
+      // LOAD PROFILE
+      // ==========================================
+
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error(
+          "Profile load error:",
+          profileError
+        );
+      }
+
+      // ==========================================
+      // LOAD HEALTH PROFILE
+      // ==========================================
+
+      const {
+        data: healthProfile,
+        error: healthError,
+      } = await supabase
+        .from("health_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (healthError) {
+        console.error(
+          "Health profile load error:",
+          healthError
+        );
+      }
+
+      // Combine profile + health profile
+
+      setHealthData({
+        fullName: profile?.full_name || "",
+        dateOfBirth: profile?.date_of_birth || "",
+        gender: profile?.gender || "",
+        phone: profile?.phone || "",
+        email:
+          profile?.email ||
+          user.email ||
+          "",
+        address: profile?.address || "",
+
+        bloodGroup:
+          healthProfile?.blood_group || "",
+
+        height:
+          healthProfile?.height || "",
+
+        weight:
+          healthProfile?.weight || "",
+
+        allergies:
+          healthProfile?.allergies || "",
+
+        medicalConditions:
+          healthProfile?.chronic_conditions || "",
+
+        currentMedications:
+          healthProfile?.current_medications || "",
+
+        emergencyContactName:
+          healthProfile?.emergency_contact_name ||
+          "",
+
+        relationship:
+          healthProfile?.emergency_relationship ||
+          "",
+
+        emergencyPhone:
+          healthProfile?.emergency_contact_phone ||
+          "",
+      });
+
+      // ==========================================
+      // LOAD MEDICAL RECORDS
+      // ==========================================
+
+      const {
+        data: records,
+        error: recordsError,
+      } = await supabase
+        .from("medical_records")
+        .select("*")
+        .eq("patient_id", user.id)
+        .order("record_date", {
+          ascending: false,
+        });
+
+      if (recordsError) {
+        console.error(
+          "Medical records load error:",
+          recordsError
+        );
+      } else {
+        const formattedRecords =
+          (records || []).map(
+            (record) => ({
+              id: record.id,
+
+              title:
+                record.diagnosis ||
+                record.record_type ||
+                "Medical Record",
+
+              type:
+                record.record_type ||
+                "Medical Record",
+
+              doctor:
+                record.doctor_name || "",
+
+              date:
+                record.record_date || "",
+
+              description:
+                record.description || "",
+            })
+          );
+
+        setMedicalRecords(
+          formattedRecords
+        );
+      }
+
+      // ==========================================
+      // LOAD PRESCRIPTIONS
+      // ==========================================
+
+      const {
+        data: prescriptionData,
+        error: prescriptionError,
+      } = await supabase
+        .from("prescriptions")
+        .select("*")
+        .eq("patient_id", user.id)
+        .order("prescription_date", {
+          ascending: false,
+        });
+
+      if (prescriptionError) {
+        console.error(
+          "Prescriptions load error:",
+          prescriptionError
+        );
+      } else {
+        const formattedPrescriptions =
+          (prescriptionData || []).map(
+            (prescription) => {
+              let endDate = "";
+
+              if (prescription.duration) {
+                const daysMatch =
+                  prescription.duration.match(
+                    /\d+/
+                  );
+
+                if (daysMatch) {
+                  const days = parseInt(
+                    daysMatch[0],
+                    10
+                  );
+
+                  if (
+                    prescription.prescription_date
+                  ) {
+                    const date =
+                      new Date(
+                        prescription.prescription_date +
+                          "T00:00:00"
+                      );
+
+                    date.setDate(
+                      date.getDate() +
+                        days -
+                        1
+                    );
+
+                    endDate =
+                      date
+                        .toISOString()
+                        .split("T")[0];
+                  }
+                }
+              }
+
+              let status = "Active";
+
+              if (endDate) {
+                const today = new Date();
+
+                today.setHours(
+                  0,
+                  0,
+                  0,
+                  0
+                );
+
+                const end = new Date(
+                  endDate +
+                    "T00:00:00"
+                );
+
+                if (end < today) {
+                  status = "Completed";
+                }
+              }
+
+              return {
+                id: prescription.id,
+
+                medicine:
+                  prescription.medicine_name,
+
+                dosage:
+                  prescription.dosage || "",
+
+                frequency:
+                  prescription.frequency ||
+                  "",
+
+                doctor:
+                  prescription.doctor_name ||
+                  "",
+
+                startDate:
+                  prescription.prescription_date ||
+                  "",
+
+                endDate,
+
+                status,
+              };
+            }
+          );
+
+        setPrescriptions(
+          formattedPrescriptions
+        );
+      }
+
+      // ==========================================
+      // LOAD APPOINTMENTS
+      // ==========================================
+
+      const {
+        data: appointmentData,
+        error: appointmentError,
+      } = await supabase
+        .from("appointments")
+        .select(
+          "id, doctor_name, specialty, hospital_name, appointment_date, appointment_time, reason, notes, status"
+        )
+        .eq("patient_id", user.id)
+        .order("appointment_date", {
+          ascending: true,
+        })
+        .order("appointment_time", {
+          ascending: true,
+        });
+
+      // Debug information
+      console.log(
+        "Dashboard - Supabase appointments:",
+        appointmentData
+      );
+
+      if (appointmentError) {
+        console.error(
+          "Appointments load error:",
+          appointmentError
+        );
+
+        setAppointments([]);
+      } else {
+        const formattedAppointments =
+          (appointmentData || []).map(
+            (appointment) => {
+              const dbStatus =
+                String(
+                  appointment.status ||
+                    "scheduled"
+                ).toLowerCase();
+
+              let displayStatus =
+                "Upcoming";
+
+              if (
+                dbStatus ===
+                "completed"
+              ) {
+                displayStatus =
+                  "Completed";
+              } else if (
+                dbStatus ===
+                "cancelled"
+              ) {
+                displayStatus =
+                  "Cancelled";
+              } else {
+                displayStatus =
+                  "Upcoming";
+              }
+
+              return {
+                id: appointment.id,
+
+                doctor:
+                  appointment.doctor_name ||
+                  "",
+
+                specialty:
+                  appointment.specialty ||
+                  "",
+
+                hospital:
+                  appointment.hospital_name ||
+                  "",
+
+                date:
+                  appointment.appointment_date ||
+                  "",
+
+                time:
+                  appointment.appointment_time
+                    ? String(
+                        appointment.appointment_time
+                      ).slice(0, 5)
+                    : "",
+
+                notes:
+                  appointment.notes ||
+                  appointment.reason ||
+                  "",
+
+                status:
+                  displayStatus,
+              };
+            }
+          );
+
+        console.log(
+          "Dashboard - Formatted appointments:",
+          formattedAppointments
+        );
+
+        setAppointments(
+          formattedAppointments
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Dashboard loading error:",
+        error
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ================= LOAD DATA WHEN DASHBOARD OPENS =================
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
   // ================= PATIENT INFORMATION =================
 
   const patientName =
-    healthData.fullName && healthData.fullName.trim() !== ""
+    healthData.fullName &&
+    healthData.fullName.trim() !== ""
       ? healthData.fullName
       : "Patient";
 
   // ================= PRESCRIPTIONS =================
 
-  const activePrescriptions = prescriptions.filter(
-    (prescription) => prescription.status === "Active"
-  ).length;
+  const activePrescriptions =
+    prescriptions.filter(
+      (prescription) =>
+        prescription.status ===
+        "Active"
+    ).length;
 
   // ================= APPOINTMENTS =================
 
-  const upcomingAppointments = appointments.filter(
-    (appointment) =>
-      appointment.status !== "Completed" &&
-      appointment.status !== "Cancelled"
-  );
+  const upcomingAppointments =
+    appointments;
 
   // ================= NOTIFICATION =================
 
   const handleNotification = () => {
-    alert("You have no new notifications.");
+    alert(
+      "You have no new notifications."
+    );
   };
 
   // ================= SETTINGS =================
 
   const handleSettings = () => {
-    alert("Settings feature will be added in a future version.");
+    alert(
+      "Settings feature will be added in a future version."
+    );
   };
 
   // ================= LOGOUT =================
 
-  const handleLogout = () => {
-    alert("Logout feature is not connected yet.");
+  const handleLogout = async () => {
+    const { error } =
+      await supabase.auth.signOut();
+
+    if (error) {
+      console.error(
+        "Logout error:",
+        error
+      );
+
+      alert("Unable to logout.");
+      return;
+    }
+
+    localStorage.removeItem(
+      "currentPage"
+    );
+
+    window.location.reload();
   };
+
+  // ================= LOADING =================
+
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <main className="dashboard-main">
+          <div
+            style={{
+              padding: "40px",
+              textAlign: "center",
+            }}
+          >
+            <h2>
+              Loading your dashboard...
+            </h2>
+
+            <p>
+              Fetching your healthcare
+              information.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard">
@@ -68,7 +533,9 @@ function Dashboard({
           </div>
 
           <div>
-            <h2>Healthcare</h2>
+            <h2>
+              Healthcare
+            </h2>
 
             <span>
               AI Medical Passport
@@ -77,26 +544,22 @@ function Dashboard({
 
         </div>
 
-
         {/* ================= NAVIGATION ================= */}
 
         <nav className="sidebar-nav">
 
-          {/* DASHBOARD */}
-
           <button
             className="nav-item active"
-            onClick={() => window.scrollTo({
-              top: 0,
-              behavior: "smooth",
-            })}
+            onClick={() =>
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              })
+            }
           >
             <span>🏠</span>
             Dashboard
           </button>
-
-
-          {/* HEALTH PROFILE */}
 
           <button
             className="nav-item"
@@ -106,9 +569,6 @@ function Dashboard({
             Health Profile
           </button>
 
-
-          {/* MEDICAL RECORDS */}
-
           <button
             className="nav-item"
             onClick={onMedicalRecords}
@@ -116,9 +576,6 @@ function Dashboard({
             <span>📋</span>
             Medical Records
           </button>
-
-
-          {/* PRESCRIPTIONS */}
 
           <button
             className="nav-item"
@@ -128,9 +585,6 @@ function Dashboard({
             Prescriptions
           </button>
 
-
-          {/* APPOINTMENTS */}
-
           <button
             className="nav-item"
             onClick={onAppointments}
@@ -138,9 +592,6 @@ function Dashboard({
             <span>📅</span>
             Appointments
           </button>
-
-
-          {/* EMERGENCY PASSPORT */}
 
           <button
             className="nav-item"
@@ -150,9 +601,6 @@ function Dashboard({
             Emergency Passport
           </button>
 
-
-          {/* AI ASSISTANT */}
-
           <button
             className="nav-item"
             onClick={onAIAssistant}
@@ -161,14 +609,21 @@ function Dashboard({
             AI Assistant
           </button>
 
-        </nav>
+          {/* ================= HEALTHCARE RESOURCES ================= */}
 
+          <button
+            className="nav-item"
+            onClick={onHealthcareResources}
+          >
+            <span>🏥</span>
+            Healthcare Resources
+          </button>
+
+        </nav>
 
         {/* ================= SIDEBAR BOTTOM ================= */}
 
         <div className="sidebar-bottom">
-
-          {/* SETTINGS */}
 
           <button
             className="nav-item"
@@ -178,9 +633,6 @@ function Dashboard({
             Settings
           </button>
 
-
-          {/* LOGOUT */}
-
           <button
             className="nav-item logout"
             onClick={handleLogout}
@@ -189,15 +641,21 @@ function Dashboard({
             Logout
           </button>
 
+          <button
+            className="nav-item"
+            onClick={onDoctorEmergencyAccess}
+          >
+            <span>🩺</span>
+            Doctor Emergency Access
+          </button>
+
         </div>
 
       </aside>
 
-
       {/* ================= MAIN DASHBOARD ================= */}
 
       <main className="dashboard-main">
-
 
         {/* ================= HEADER ================= */}
 
@@ -209,11 +667,9 @@ function Dashboard({
               DASHBOARD
             </p>
 
-
             <h1>
               Welcome back, {patientName}
             </h1>
-
 
             <p className="dashboard-welcome">
               Here's an overview of your healthcare information.
@@ -221,40 +677,39 @@ function Dashboard({
 
           </div>
 
-
           <div className="profile">
-
-            {/* NOTIFICATION */}
 
             <button
               className="notification"
-              onClick={handleNotification}
+              onClick={
+                handleNotification
+              }
               title="Notifications"
             >
               🔔
             </button>
 
-
-            {/* PROFILE AVATAR */}
-
             <button
               className="profile-avatar"
-              onClick={onHealthProfile}
+              onClick={
+                onHealthProfile
+              }
               title="Open Health Profile"
               style={{
                 border: "none",
                 cursor: "pointer",
               }}
             >
-              {patientName.charAt(0).toUpperCase()}
+              {patientName
+                .charAt(0)
+                .toUpperCase()}
             </button>
-
-
-            {/* PROFILE INFO */}
 
             <div
               className="profile-info"
-              onClick={onHealthProfile}
+              onClick={
+                onHealthProfile
+              }
               style={{
                 cursor: "pointer",
               }}
@@ -275,7 +730,6 @@ function Dashboard({
 
         </header>
 
-
         {/* ================= EMERGENCY BANNER ================= */}
 
         <section className="emergency-banner">
@@ -285,7 +739,6 @@ function Dashboard({
             <div className="emergency-icon">
               🚨
             </div>
-
 
             <div>
 
@@ -302,24 +755,27 @@ function Dashboard({
 
           </div>
 
-
-          <button onClick={onEmergencyPassport}>
+          <button
+            onClick={
+              onEmergencyPassport
+            }
+          >
             Open Emergency Passport
           </button>
 
         </section>
 
-
         {/* ================= SUMMARY CARDS ================= */}
 
         <section className="summary-grid">
-
 
           {/* HEALTH PROFILE */}
 
           <div
             className="summary-card"
-            onClick={onHealthProfile}
+            onClick={
+              onHealthProfile
+            }
           >
 
             <div className="summary-icon blue">
@@ -342,12 +798,13 @@ function Dashboard({
 
           </div>
 
-
           {/* MEDICAL RECORDS */}
 
           <div
             className="summary-card"
-            onClick={onMedicalRecords}
+            onClick={
+              onMedicalRecords
+            }
           >
 
             <div className="summary-icon green">
@@ -368,12 +825,13 @@ function Dashboard({
 
           </div>
 
-
           {/* PRESCRIPTIONS */}
 
           <div
             className="summary-card"
-            onClick={onPrescriptions}
+            onClick={
+              onPrescriptions
+            }
           >
 
             <div className="summary-icon purple">
@@ -394,12 +852,13 @@ function Dashboard({
 
           </div>
 
-
           {/* APPOINTMENTS */}
 
           <div
             className="summary-card"
-            onClick={onAppointments}
+            onClick={
+              onAppointments
+            }
           >
 
             <div className="summary-icon orange">
@@ -422,11 +881,9 @@ function Dashboard({
 
         </section>
 
-
         {/* ================= CONTENT GRID ================= */}
 
         <section className="dashboard-grid">
-
 
           {/* ================= MEDICAL RECORDS ================= */}
 
@@ -446,21 +903,27 @@ function Dashboard({
 
               </div>
 
-
-              <button onClick={onMedicalRecords}>
+              <button
+                onClick={
+                  onMedicalRecords
+                }
+              >
                 View All →
               </button>
 
             </div>
 
-
-            {medicalRecords.length === 0 ? (
+            {medicalRecords.length ===
+            0 ? (
 
               <div
                 className="empty-state"
-                onClick={onMedicalRecords}
+                onClick={
+                  onMedicalRecords
+                }
                 style={{
-                  cursor: "pointer",
+                  cursor:
+                    "pointer",
                 }}
               >
 
@@ -484,50 +947,59 @@ function Dashboard({
               <div className="dashboard-record-list">
 
                 {medicalRecords
-                  .slice(-3)
-                  .reverse()
-                  .map((record) => (
+                  .slice(0, 3)
+                  .map(
+                    (record) => (
 
-                    <div
-                      className="dashboard-record-item"
-                      key={record.id}
-                      onClick={onMedicalRecords}
-                      style={{
-                        cursor: "pointer",
-                      }}
-                    >
+                      <div
+                        className="dashboard-record-item"
+                        key={
+                          record.id
+                        }
+                        onClick={
+                          onMedicalRecords
+                        }
+                        style={{
+                          cursor:
+                            "pointer",
+                        }}
+                      >
 
-                      <div className="dashboard-item-icon">
+                        <div className="dashboard-item-icon">
 
-                        {record.type === "Prescription"
-                          ? "💊"
-                          : "📋"}
+                          {record.type ===
+                          "Prescription"
+                            ? "💊"
+                            : "📋"}
+
+                        </div>
+
+                        <div>
+
+                          <strong>
+                            {
+                              record.title
+                            }
+                          </strong>
+
+                          <p>
+                            {
+                              record.type
+                            }
+                          </p>
+
+                        </div>
 
                       </div>
 
-
-                      <div>
-
-                        <strong>
-                          {record.title}
-                        </strong>
-
-                        <p>
-                          {record.type}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                  ))}
+                    )
+                  )}
 
               </div>
 
             )}
 
           </div>
-
 
           {/* ================= PRESCRIPTIONS ================= */}
 
@@ -547,21 +1019,27 @@ function Dashboard({
 
               </div>
 
-
-              <button onClick={onPrescriptions}>
+              <button
+                onClick={
+                  onPrescriptions
+                }
+              >
                 View All →
               </button>
 
             </div>
 
-
-            {prescriptions.length === 0 ? (
+            {prescriptions.length ===
+            0 ? (
 
               <div
                 className="empty-state"
-                onClick={onPrescriptions}
+                onClick={
+                  onPrescriptions
+                }
                 style={{
-                  cursor: "pointer",
+                  cursor:
+                    "pointer",
                 }}
               >
 
@@ -585,53 +1063,66 @@ function Dashboard({
               <div className="dashboard-prescription-list">
 
                 {prescriptions
-                  .slice(-3)
-                  .reverse()
-                  .map((prescription) => (
+                  .slice(0, 3)
+                  .map(
+                    (
+                      prescription
+                    ) => (
 
-                    <div
-                      className="dashboard-prescription-item"
-                      key={prescription.id}
-                      onClick={onPrescriptions}
-                      style={{
-                        cursor: "pointer",
-                      }}
-                    >
+                      <div
+                        className="dashboard-prescription-item"
+                        key={
+                          prescription.id
+                        }
+                        onClick={
+                          onPrescriptions
+                        }
+                        style={{
+                          cursor:
+                            "pointer",
+                        }}
+                      >
 
-                      <div className="dashboard-item-icon">
-                        💊
+                        <div className="dashboard-item-icon">
+                          💊
+                        </div>
+
+                        <div className="dashboard-prescription-info">
+
+                          <strong>
+                            {
+                              prescription.medicine
+                            }
+                          </strong>
+
+                          <p>
+                            {
+                              prescription.dosage
+                            }
+                            {" • "}
+                            {
+                              prescription.frequency
+                            }
+                          </p>
+
+                        </div>
+
+                        <span className="dashboard-prescription-status">
+                          {
+                            prescription.status
+                          }
+                        </span>
+
                       </div>
 
-
-                      <div className="dashboard-prescription-info">
-
-                        <strong>
-                          {prescription.medicine}
-                        </strong>
-
-                        <p>
-                          {prescription.dosage}
-                          {" • "}
-                          {prescription.frequency}
-                        </p>
-
-                      </div>
-
-
-                      <span className="dashboard-prescription-status">
-                        {prescription.status}
-                      </span>
-
-                    </div>
-
-                  ))}
+                    )
+                  )}
 
               </div>
 
             )}
 
           </div>
-
 
           {/* ================= APPOINTMENTS ================= */}
 
@@ -651,21 +1142,27 @@ function Dashboard({
 
               </div>
 
-
-              <button onClick={onAppointments}>
+              <button
+                onClick={
+                  onAppointments
+                }
+              >
                 View All →
               </button>
 
             </div>
 
-
-            {upcomingAppointments.length === 0 ? (
+            {upcomingAppointments.length ===
+            0 ? (
 
               <div
                 className="empty-state"
-                onClick={onAppointments}
+                onClick={
+                  onAppointments
+                }
                 style={{
-                  cursor: "pointer",
+                  cursor:
+                    "pointer",
                 }}
               >
 
@@ -690,43 +1187,57 @@ function Dashboard({
 
                 {upcomingAppointments
                   .slice(0, 3)
-                  .map((appointment) => (
+                  .map(
+                    (
+                      appointment
+                    ) => (
 
-                    <div
-                      className="dashboard-appointment-item"
-                      key={appointment.id}
-                      onClick={onAppointments}
-                      style={{
-                        cursor: "pointer",
-                      }}
-                    >
+                      <div
+                        className="dashboard-appointment-item"
+                        key={
+                          appointment.id
+                        }
+                        onClick={
+                          onAppointments
+                        }
+                        style={{
+                          cursor:
+                            "pointer",
+                        }}
+                      >
 
-                      <div className="appointment-small-icon">
-                        📅
+                        <div className="appointment-small-icon">
+                          📅
+                        </div>
+
+                        <div>
+
+                          <strong>
+                            {
+                              appointment.doctor ||
+                              "Doctor Appointment"
+                            }
+                          </strong>
+
+                          <p>
+                            {appointment.date &&
+                              new Date(
+                                appointment.date +
+                                  "T00:00:00"
+                              ).toLocaleDateString(
+                                "en-GB"
+                              )}
+
+                            {appointment.time &&
+                              ` • ${appointment.time}`}
+                          </p>
+
+                        </div>
+
                       </div>
 
-
-                      <div>
-
-                        <strong>
-                          {appointment.doctor ||
-                            "Doctor Appointment"}
-                        </strong>
-
-                        <p>
-
-                          {appointment.date}
-
-                          {appointment.time &&
-                            ` • ${appointment.time}`}
-
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                  ))}
+                    )
+                  )}
 
               </div>
 
@@ -736,7 +1247,6 @@ function Dashboard({
 
         </section>
 
-
         {/* ================= AI ASSISTANT ================= */}
 
         <section
@@ -744,13 +1254,14 @@ function Dashboard({
           style={{
             cursor: "pointer",
           }}
-          onClick={onAIAssistant}
+          onClick={
+            onAIAssistant
+          }
         >
 
           <div className="ai-icon">
             🤖
           </div>
-
 
           <div className="ai-content">
 
@@ -769,7 +1280,6 @@ function Dashboard({
             </p>
 
           </div>
-
 
           <button
             onClick={(e) => {

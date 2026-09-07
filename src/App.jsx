@@ -1,18 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import Home from "./home";
 import Login from "./Login";
 import Dashboard from "./Dashboard";
 import HealthProfile from "./HealthProfile";
 import EmergencyPassport from "./EmergencyPassport";
+import DoctorEmergencyAccess from "./DoctorEmergencyAccess";
 import MedicalRecords from "./MedicalRecords";
 import Prescriptions from "./Prescriptions";
 import Appointments from "./Appointments";
 import AIAssistant from "./AIAssistant";
+import HealthcareResources from "./HealthcareResources";
 
 function App() {
   // ================= CURRENT PAGE =================
   const [page, setPage] = useState("home");
+
+  // ================= REMEMBER CURRENT PAGE =================
+  useEffect(() => {
+    localStorage.setItem("currentPage", page);
+  }, [page]);
 
   // ================= MEDICAL RECORDS =================
   const [medicalRecords, setMedicalRecords] = useState([]);
@@ -65,21 +72,34 @@ function App() {
       {/* ================= DASHBOARD ================= */}
       {page === "dashboard" && (
         <Dashboard
-          onHealthProfile={() => setPage("health-profile")}
+          onHealthProfile={() =>
+            setPage("health-profile")
+          }
+
           onEmergencyPassport={() =>
             setPage("emergency-passport")
           }
+
           onMedicalRecords={() =>
             setPage("medical-records")
           }
+
           onPrescriptions={() =>
             setPage("prescriptions")
           }
+
           onAppointments={() =>
             setPage("appointments")
           }
+
           onAIAssistant={() =>
             setPage("ai-assistant")
+          }
+          onHealthcareResources={() =>
+            setPage("healthcare-resources")
+          }
+          onDoctorEmergencyAccess={() =>
+            setPage("doctor-emergency-access")
           }
 
           medicalRecords={medicalRecords}
@@ -92,7 +112,10 @@ function App() {
       {/* ================= HEALTH PROFILE ================= */}
       {page === "health-profile" && (
         <HealthProfile
-          onBack={() => setPage("dashboard")}
+          onBack={() =>
+            setPage("dashboard")
+          }
+
           healthData={healthData}
           setHealthData={setHealthData}
         />
@@ -101,15 +124,31 @@ function App() {
       {/* ================= EMERGENCY PASSPORT ================= */}
       {page === "emergency-passport" && (
         <EmergencyPassport
-          onBack={() => setPage("dashboard")}
+          onBack={() =>
+            setPage("dashboard")
+          }
+
           healthData={healthData}
+          setHealthData={setHealthData}
+        />
+      )}
+
+      {/* ================= DOCTOR EMERGENCY ACCESS ================= */}
+      {page === "doctor-emergency-access" && (
+        <DoctorEmergencyAccess
+          onBack={() =>
+            setPage("dashboard")
+          }
         />
       )}
 
       {/* ================= MEDICAL RECORDS ================= */}
       {page === "medical-records" && (
         <MedicalRecords
-          onBack={() => setPage("dashboard")}
+          onBack={() =>
+            setPage("dashboard")
+          }
+
           records={medicalRecords}
           setRecords={setMedicalRecords}
         />
@@ -118,25 +157,36 @@ function App() {
       {/* ================= PRESCRIPTIONS ================= */}
       {page === "prescriptions" && (
         <Prescriptions
-          onBack={() => setPage("dashboard")}
-          prescriptions={prescriptions}
-          setPrescriptions={setPrescriptions}
+          onBack={() =>
+            setPage("dashboard")
+          }
         />
       )}
 
       {/* ================= APPOINTMENTS ================= */}
       {page === "appointments" && (
         <Appointments
-          onBack={() => setPage("dashboard")}
-          appointments={appointments}
-          setAppointments={setAppointments}
+          onBack={() =>
+            setPage("dashboard")
+          }
         />
       )}
 
       {/* ================= AI ASSISTANT ================= */}
       {page === "ai-assistant" && (
         <AIAssistant
-          onBack={() => setPage("dashboard")}
+          onBack={() =>
+            setPage("dashboard")
+          }
+        />
+      )}
+
+      {/* ================= HEALTHCARE RESOURCES ================= */}
+      {page === "healthcare-resources" && (
+        <HealthcareResources
+          onBack={() =>
+            setPage("dashboard")
+          }
         />
       )}
     </>
