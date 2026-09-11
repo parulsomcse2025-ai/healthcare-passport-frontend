@@ -1134,7 +1134,8 @@ Emergency Contact: ${
                       borderRadius: "18px",
                       background: "#ffffff",
                       border: "1px solid #e2e8f0",
-                      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+                      boxShadow:
+                        "0 10px 30px rgba(15, 23, 42, 0.08)",
                       textAlign: "center",
                     }}
                   >
@@ -1159,12 +1160,21 @@ Emergency Contact: ${
                         border: "1px solid #e2e8f0",
                       }}
                     >
+
+                      {/* =================================================
+                          FIXED QR CODE
+                          QR NOW CONTAINS THE COMPLETE WEBSITE URL
+                      ================================================== */}
+
                       <QRCodeSVG
-                        value={token}
+                        value={`${window.location.origin}/?emergency_token=${encodeURIComponent(
+                          token
+                        )}`}
                         size={190}
                         level="M"
                         includeMargin={true}
                       />
+
                     </div>
 
                     <div
@@ -1208,6 +1218,7 @@ Emergency Contact: ${
                       }}
                     >
                       <span>⏱️</span>
+
                       <span>
                         {String(
                           Math.floor(countdown / 60)
@@ -1217,6 +1228,7 @@ Emergency Contact: ${
                           countdown % 60
                         ).padStart(2, "0")}
                       </span>
+
                     </div>
 
                     <div
@@ -1227,14 +1239,27 @@ Emergency Contact: ${
                         gap: "7px",
                         padding: "7px 13px",
                         borderRadius: "999px",
-                        background: countdown > 0 ? "#ecfdf5" : "#fef2f2",
-                        color: countdown > 0 ? "#047857" : "#b91c1c",
+                        background:
+                          countdown > 0
+                            ? "#ecfdf5"
+                            : "#fef2f2",
+                        color:
+                          countdown > 0
+                            ? "#047857"
+                            : "#b91c1c",
                         fontSize: "13px",
                         fontWeight: "700",
                       }}
                     >
-                      <span>●</span>
-                      {countdown > 0 ? "Valid" : "Expired"}
+
+                      <span>
+                        ●
+                      </span>
+
+                      {countdown > 0
+                        ? "Valid"
+                        : "Expired"}
+
                     </div>
 
                   </div>
