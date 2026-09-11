@@ -1,18 +1,23 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 import "./DoctorEmergencyAccess.css";
 import { supabase } from "./supabase";
 
-function DoctorEmergencyAccess({ onBack }) {
+function DoctorEmergencyAccess({ onBack, qrToken }) {
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [patientInfo, setPatientInfo] = useState(null);
+  const [showScanner, setShowScanner] = useState(false);
 
-  const verifyToken = async () => {
+  const scannerRef = useRef(null);
+  const isScanningRef = useRef(false);
+
+  const verifyToken = async (tokenToVerify = token) => {
     setError("");
     setPatientInfo(null);
 
-    const enteredToken = token.trim().toUpperCase();
+    const enteredToken = tokenToVerify.trim().toUpperCase();
 
     if (!enteredToken) {
       setError("Please enter the emergency access token.");
@@ -38,7 +43,9 @@ function DoctorEmergencyAccess({ onBack }) {
           setError(
             "This emergency token has expired. Please generate a new token."
           );
-        } else if (errorMessage.includes("INVALID_OR_INACTIVE_TOKEN")) {
+        } else if (
+          errorMessage.includes("INVALID_OR_INACTIVE_TOKEN")
+        ) {
           setError("Invalid or inactive emergency token.");
         } else if (errorMessage.includes("PATIENT_NOT_FOUND")) {
           setError("Patient information could not be found.");
@@ -61,16 +68,181 @@ function DoctorEmergencyAccess({ onBack }) {
       }
 
       setPatientInfo(data[0]);
-
       alert("Emergency access verified successfully! 🔐");
-    } catch (error) {
-      console.error("Verification error:", error);
+    } catch (verificationError) {
+      console.error("Verification error:", verificationError);
       setError(
         "Something went wrong while verifying the emergency token."
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  // =========================================================
+  // AUTO-VERIFY TOKEN FROM QR URL
+  // =========================================================
+
+  useEffect(() => {
+    if (!qrToken) {
+      return;
+    }
+
+    const cleanedToken = qrToken.trim().toUpperCase();
+
+    if (cleanedToken) {
+      setToken(cleanedToken);
+      verifyToken(cleanedToken);
+    }
+  }, [qrToken]);
+
+  // =========================================================
+  // START QR SCANNER AFTER QR ELEMENT IS RENDERED
+  // =========================================================
+
+  useEffect(() => {
+    if (!showScanner) {
+      return;
+    }
+
+    let mounted = true;
+
+    const startQrScanner = async () => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        if (!mounted) {
+          return;
+        }
+
+        const readerElement = document.getElementById("qr-reader");
+
+        if (!readerElement) {
+          setError(
+            "QR scanner could not be initialized. Please try again."
+          );
+          setShowScanner(false);
+          return;
+        }
+
+        const qrScanner = new Html5Qrcode("qr-reader");
+
+        scannerRef.current = qrScanner;
+        isScanningRef.current = true;
+
+        await qrScanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: {
+              width: 250,
+              height: 250,
+            },
+          },
+          async (decodedText) => {
+            if (!isScanningRef.current) {
+              return;
+            }
+
+            console.log("Emergency QR scanned:", decodedText);
+            isScanningRef.current = false;
+
+            try {
+              await qrScanner.stop();
+            } catch (stopError) {
+              console.error("Scanner stop error:", stopError);
+            }
+
+            try {
+              await qrScanner.clear();
+            } catch (clearError) {
+              console.error("Scanner clear error:", clearError);
+            }
+
+            scannerRef.current = null;
+
+            if (!mounted) {
+              return;
+            }
+
+            setShowScanner(false);
+
+            let scannedToken = decodedText.trim();
+
+            // Support both the new website QR URL and the older
+            // token-only QR format.
+            try {
+              const scannedUrl = new URL(scannedToken);
+              const urlToken = scannedUrl.searchParams.get(
+                "emergency_token"
+              );
+
+              if (urlToken) {
+                scannedToken = urlToken;
+              }
+            } catch {
+              // Not a URL, so treat the scanned value as the token.
+            }
+
+            scannedToken = scannedToken.trim().toUpperCase();
+            setToken(scannedToken);
+
+            await verifyToken(scannedToken);
+          },
+          () => {
+            // Normal scanning attempts do not need an error message.
+          }
+        );
+      } catch (scannerError) {
+        console.error("QR scanner error:", scannerError);
+
+        isScanningRef.current = false;
+        scannerRef.current = null;
+
+        if (!mounted) {
+          return;
+        }
+
+        setShowScanner(false);
+        setError(
+          "Unable to access the camera. Please check camera permission and try again."
+        );
+      }
+    };
+
+    startQrScanner();
+
+    return () => {
+      mounted = false;
+    };
+  }, [showScanner]);
+
+  const stopScanner = async () => {
+    isScanningRef.current = false;
+
+    const qrScanner = scannerRef.current;
+
+    if (qrScanner) {
+      try {
+        await qrScanner.stop();
+      } catch (stopError) {
+        console.error("Error stopping scanner:", stopError);
+      }
+
+      try {
+        await qrScanner.clear();
+      } catch (clearError) {
+        console.error("Error clearing scanner:", clearError);
+      }
+    }
+
+    scannerRef.current = null;
+    setShowScanner(false);
+  };
+
+  const openScanner = () => {
+    setError("");
+    setShowScanner(true);
   };
 
   const clearAccess = () => {
@@ -109,53 +281,90 @@ function DoctorEmergencyAccess({ onBack }) {
 
             <p className="doctor-access-description">
               Enter the temporary emergency access token provided
-              by the patient to securely access their critical
-              medical information.
+              by the patient or scan their emergency QR code to
+              securely access their critical medical information.
             </p>
 
-            <div className="token-input-section">
-              <label>Emergency Access Token</label>
+            {showScanner && (
+              <div className="qr-scanner-section">
+                <h3>📷 Scan Emergency QR</h3>
 
-              <input
-                type="text"
-                placeholder="Example: AB12-CD34"
-                value={token}
-                onChange={(e) =>
-                  setToken(e.target.value.toUpperCase())
-                }
-                maxLength={9}
-              />
-            </div>
+                <p>
+                  Point the camera at the patient's emergency QR code.
+                </p>
 
-            {error && (
-              <div className="token-error">
-                ⚠️ {error}
+                <div id="qr-reader" className="qr-reader"></div>
+
+                <button
+                  type="button"
+                  className="close-scanner-btn"
+                  onClick={stopScanner}
+                >
+                  ✕ Close Scanner
+                </button>
               </div>
             )}
 
-            <button
-              className="verify-token-btn"
-              onClick={verifyToken}
-              disabled={loading}
-            >
-              {loading
-                ? "🔄 Verifying..."
-                : "🔓 Verify Emergency Token"}
-            </button>
+            {!showScanner && (
+              <>
+                <div className="token-input-section">
+                  <label>Emergency Access Token</label>
 
-            <div className="access-information">
-              <div className="information-icon">🛡️</div>
+                  <input
+                    type="text"
+                    placeholder="Example: AB12-CD34"
+                    value={token}
+                    onChange={(e) =>
+                      setToken(e.target.value.toUpperCase())
+                    }
+                    maxLength={9}
+                  />
+                </div>
 
-              <div>
-                <strong>Controlled Access</strong>
+                {error && (
+                  <div className="token-error">
+                    ⚠️ {error}
+                  </div>
+                )}
 
-                <p>
-                  Emergency access is temporary and expires
-                  automatically. Access activity is recorded
-                  for security and auditing.
-                </p>
-              </div>
-            </div>
+                <button
+                  className="verify-token-btn"
+                  onClick={() => verifyToken()}
+                  disabled={loading}
+                >
+                  {loading
+                    ? "🔄 Verifying..."
+                    : "🔓 Verify Emergency Token"}
+                </button>
+
+                <div className="qr-divider">
+                  <span>OR</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="scan-qr-btn"
+                  onClick={openScanner}
+                  disabled={loading}
+                >
+                  📷 Scan Emergency QR
+                </button>
+
+                <div className="access-information">
+                  <div className="information-icon">🛡️</div>
+
+                  <div>
+                    <strong>Controlled Access</strong>
+
+                    <p>
+                      Emergency access is temporary and expires
+                      automatically. Access activity is recorded
+                      for security and auditing.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="emergency-medical-card">
@@ -229,8 +438,7 @@ function DoctorEmergencyAccess({ onBack }) {
               <span>📞 Emergency Contact</span>
 
               <strong>
-                {patientInfo.emergency_contact ||
-                  "Not available"}
+                {patientInfo.emergency_contact || "Not available"}
               </strong>
             </div>
 

@@ -6,9 +6,12 @@ import {
   Popup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { QRCodeSVG } from "qrcode.react";
 
 import "./EmergencyPassport.css";
 import { supabase } from "./supabase";
+
+const TOKEN_VALIDITY_MS = 10 * 60 * 1000;
 
 function EmergencyPassport({
   onBack,
@@ -17,6 +20,8 @@ function EmergencyPassport({
 }) {
   const [emergencyMode, setEmergencyMode] = useState(false);
   const [token, setToken] = useState("");
+  const [tokenExpiresAt, setTokenExpiresAt] = useState(null);
+  const [countdown, setCountdown] = useState(0);
   const [userLocation, setUserLocation] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -333,10 +338,7 @@ Emergency Contact: ${
           .select("*")
           .eq("patient_id", user.id)
           .eq("is_active", true)
-          .gt(
-            "expires_at",
-            new Date().toISOString()
-          )
+          .gt("expires_at", new Date().toISOString())
           .order("created_at", {
             ascending: false,
           })
@@ -351,11 +353,30 @@ Emergency Contact: ${
         }
 
         if (accessData) {
-          setToken(
-            accessData.access_token
-          );
+          const remainingMs =
+            new Date(accessData.expires_at).getTime() -
+            Date.now();
+
+          // Ignore/deactivate tokens created by an older version
+          // that had a longer expiry period than the current 10-minute rule.
+          if (remainingMs > TOKEN_VALIDITY_MS + 5000) {
+            await supabase
+              .from("emergency_access")
+              .update({ is_active: false })
+              .eq("id", accessData.id);
+
+            setToken("");
+            setTokenExpiresAt(null);
+          } else if (remainingMs > 0) {
+            setToken(accessData.access_token);
+            setTokenExpiresAt(accessData.expires_at);
+          } else {
+            setToken("");
+            setTokenExpiresAt(null);
+          }
         } else {
           setToken("");
+          setTokenExpiresAt(null);
         }
       } catch (error) {
         console.error(
@@ -373,6 +394,62 @@ Emergency Contact: ${
     // database data once when this page opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // =========================================================
+  // TOKEN COUNTDOWN
+  // =========================================================
+
+  useEffect(() => {
+    if (!token || !tokenExpiresAt) {
+      setCountdown(0);
+      return;
+    }
+
+    const updateCountdown = async () => {
+      const remainingMs =
+        new Date(tokenExpiresAt).getTime() - Date.now();
+
+      const remainingSeconds = Math.max(
+        0,
+        Math.ceil(remainingMs / 1000)
+      );
+
+      setCountdown(remainingSeconds);
+
+      if (remainingSeconds === 0) {
+        setToken("");
+        setTokenExpiresAt(null);
+
+        try {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+
+          if (user) {
+            await supabase
+              .from("emergency_access")
+              .update({ is_active: false })
+              .eq("patient_id", user.id)
+              .eq("access_token", token);
+          }
+        } catch (error) {
+          console.error(
+            "Token expiry update error:",
+            error
+          );
+        }
+      }
+    };
+
+    updateCountdown();
+
+    const interval = setInterval(
+      updateCountdown,
+      1000
+    );
+
+    return () => clearInterval(interval);
+  }, [token, tokenExpiresAt]);
 
   // =========================================================
   // GET USER LOCATION
@@ -450,9 +527,10 @@ Emergency Contact: ${
 
       const newToken = createRandomToken();
 
-      // Token valid for 30 minutes
+      // Token valid for 10 minutes
+      // This keeps the QR emergency-access window short and time-limited.
       const expiresAt = new Date(
-        Date.now() + 30 * 60 * 1000
+        Date.now() + TOKEN_VALIDITY_MS
       ).toISOString();
 
       // =====================================================
@@ -501,9 +579,8 @@ Emergency Contact: ${
       // UPDATE UI
       // =====================================================
 
-      setToken(
-        accessData.access_token
-      );
+      setToken(accessData.access_token);
+      setTokenExpiresAt(accessData.expires_at);
 
       // =====================================================
       // CREATE ACCESS LOG
@@ -536,7 +613,7 @@ Emergency Contact: ${
       }
 
       alert(
-        "Emergency access token generated successfully! 🔐"
+        "Emergency access token and QR code generated successfully! 🔐📱"
       );
     } catch (error) {
       console.error(
@@ -1026,8 +1103,15 @@ Emergency Contact: ${
 
               {token ? (
 
-                <div className="generated-token">
-
+                <div
+                  className="generated-token"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "18px",
+                  }}
+                >
                   <span>
                     EMERGENCY ACCESS TOKEN
                   </span>
@@ -1041,6 +1125,119 @@ Emergency Contact: ${
                     medical information
                   </p>
 
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: "420px",
+                      marginTop: "8px",
+                      padding: "24px",
+                      borderRadius: "18px",
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "700",
+                        letterSpacing: "0.08em",
+                        color: "#475569",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      EMERGENCY ACCESS QR
+                    </div>
+
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        padding: "14px",
+                        background: "#ffffff",
+                        borderRadius: "14px",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      <QRCodeSVG
+                        value={token}
+                        size={190}
+                        level="M"
+                        includeMargin={true}
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "18px",
+                        fontSize: "14px",
+                        color: "#475569",
+                      }}
+                    >
+                      <strong>
+                        Patient:
+                      </strong>{" "}
+                      {displayValue(
+                        healthData?.fullName,
+                        "Patient"
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "8px",
+                        fontSize: "14px",
+                        color: "#475569",
+                      }}
+                    >
+                      <strong>
+                        Token ID:
+                      </strong>{" "}
+                      {token}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "16px",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontWeight: "700",
+                        fontSize: "18px",
+                      }}
+                    >
+                      <span>⏱️</span>
+                      <span>
+                        {String(
+                          Math.floor(countdown / 60)
+                        ).padStart(2, "0")}
+                        :
+                        {String(
+                          countdown % 60
+                        ).padStart(2, "0")}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "7px",
+                        padding: "7px 13px",
+                        borderRadius: "999px",
+                        background: countdown > 0 ? "#ecfdf5" : "#fef2f2",
+                        color: countdown > 0 ? "#047857" : "#b91c1c",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                      }}
+                    >
+                      <span>●</span>
+                      {countdown > 0 ? "Valid" : "Expired"}
+                    </div>
+
+                  </div>
                 </div>
 
               ) : (

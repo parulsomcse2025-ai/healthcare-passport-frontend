@@ -14,7 +14,41 @@ import HealthcareResources from "./HealthcareResources";
 
 function App() {
   // ================= CURRENT PAGE =================
-  const [page, setPage] = useState("home");
+  // If emergency_token is present in the URL,
+  // directly open Doctor Emergency Access.
+  const [page, setPage] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    return params.get("emergency_token")
+      ? "doctor-emergency-access"
+      : "home";
+  });
+
+  // ================= QR TOKEN =================
+  const [qrToken, setQrToken] = useState("");
+
+  // ================= READ QR TOKEN FROM URL =================
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const emergencyToken = params.get("emergency_token");
+
+    if (emergencyToken) {
+      const cleanedToken = emergencyToken
+        .trim()
+        .toUpperCase();
+
+      setQrToken(cleanedToken);
+
+      // Remove token from visible URL
+      // after reading it.
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+    }
+  }, []);
 
   // ================= REMEMBER CURRENT PAGE =================
   useEffect(() => {
@@ -95,9 +129,11 @@ function App() {
           onAIAssistant={() =>
             setPage("ai-assistant")
           }
+
           onHealthcareResources={() =>
             setPage("healthcare-resources")
           }
+
           onDoctorEmergencyAccess={() =>
             setPage("doctor-emergency-access")
           }
@@ -139,6 +175,8 @@ function App() {
           onBack={() =>
             setPage("dashboard")
           }
+
+          qrToken={qrToken}
         />
       )}
 

@@ -716,3 +716,128 @@
     padding-top: 20px;
   }
 }
+/* ==========================================
+   QR SCANNER
+========================================== */
+
+.qr-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: #8a94a6;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.qr-divider::before,
+.qr-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #dfe4ec;
+}
+
+.qr-divider span {
+  padding: 0 8px;
+}
+
+.scan-qr-btn {
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid #d7dce5;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.scan-qr-btn:hover {
+  background: #f5f7fa;
+  border-color: #b8c0cc;
+}
+
+.scan-qr-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.qr-scanner-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #dfe4ec;
+  border-radius: 14px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.qr-scanner-section h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.qr-scanner-section p {
+  margin: 0 0 18px;
+  color: #667085;
+  font-size: 14px;
+}
+
+.qr-reader {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 16px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.qr-reader video {
+  border-radius: 12px;
+}
+
+.close-scanner-btn {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 9px;
+  background: #eef1f5;
+  color: #374151;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.close-scanner-btn:hover {
+  background: #e3e7ed;
+}
+
+.qr-security-note {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f0f7ff;
+  border: 1px solid #d6e9ff;
+  text-align: left;
+}
+
+.qr-security-note > span {
+  font-size: 20px;
+}
+
+.qr-security-note strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #1f2937;
+}
+
+.qr-security-note p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}
